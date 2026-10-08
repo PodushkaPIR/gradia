@@ -32,18 +32,18 @@ func TestDeleteStudentFlow(t *testing.T) {
 			model.students.cursor = tc.cursor
 			target := model.students.students[tc.cursor]
 			model, cmd := updateApp(model, keypress('d'))
-			if model.deleteDialog == nil || model.deleteDialog.student.ID != target.ID || cmd != nil || repo.deleteCalls != 0 || !strings.Contains(model.View().Content, target.Name) {
+			if model.students.deleteDialog == nil || model.students.deleteDialog.student.ID != target.ID || cmd != nil || repo.deleteCalls != 0 || !strings.Contains(model.View().Content, target.Name) {
 				t.Fatal("d должен открыть подтверждение, без удаления записи")
 			}
 			// Диалог перехватывает навигацию, формы и обновление списка.
 			for _, key := range []rune{'j', 'k', 'e', 'r', 'q', 'd'} {
 				model, cmd = updateApp(model, keypress(key))
-				if cmd != nil || model.form != nil || model.students.cursor != tc.cursor {
+				if cmd != nil || model.students.form != nil || model.students.cursor != tc.cursor {
 					t.Fatalf("клавиша %q вышла за пределы диалога", key)
 				}
 			}
 			model, remove := updateApp(model, keypress('y'))
-			if remove == nil || !model.deleteDialog.deleting || repo.deleteCalls != 0 || len(model.students.students) != tc.count {
+			if remove == nil || !model.students.deleteDialog.deleting || repo.deleteCalls != 0 || len(model.students.students) != tc.count {
 				t.Fatal("удаление должно выполняться только в Cmd, список пока не меняется")
 			}
 			model, duplicate := updateApp(model, keypress('y'))
@@ -51,11 +51,11 @@ func TestDeleteStudentFlow(t *testing.T) {
 				t.Fatal("запущено дублирующее удаление")
 			}
 			model, _ = updateApp(model, tea.KeyPressMsg{Code: tea.KeyEscape})
-			if model.deleteDialog == nil {
+			if model.students.deleteDialog == nil {
 				t.Fatal("нельзя отменить уже выполняющееся удаление")
 			}
 			model, _ = updateApp(model, remove())
-			if model.deleteDialog != nil || repo.deleteCalls != 1 || len(model.students.students) != tc.count-1 {
+			if model.students.deleteDialog != nil || repo.deleteCalls != 1 || len(model.students.students) != tc.count-1 {
 				t.Fatal("после успеха диалог должен закрыться, а список обновиться")
 			}
 			selected, ok := model.students.selectedStudent()
@@ -77,7 +77,7 @@ func TestDeleteStudentCancelAndErrors(t *testing.T) {
 		model, _ = updateApp(model, model.Init()())
 		model, _ = updateApp(model, keypress('d'))
 		model, cmd := updateApp(model, cancel)
-		if model.deleteDialog != nil || cmd != nil || model.form != nil || repo.deleteCalls != 0 || len(model.students.students) != 1 {
+		if model.students.deleteDialog != nil || cmd != nil || model.students.form != nil || repo.deleteCalls != 0 || len(model.students.students) != 1 {
 			t.Fatal("отмена не должна удалять запись или открывать форму")
 		}
 	}
@@ -87,13 +87,13 @@ func TestDeleteStudentCancelAndErrors(t *testing.T) {
 	model, _ = updateApp(model, keypress('d'))
 	model, remove := updateApp(model, keypress('y'))
 	model, _ = updateApp(model, remove())
-	if model.deleteDialog == nil || model.deleteDialog.deleting || len(model.students.students) != 1 || !strings.Contains(model.View().Content, "Не удалось удалить") {
+	if model.students.deleteDialog == nil || model.students.deleteDialog.deleting || len(model.students.students) != 1 || !strings.Contains(model.View().Content, "Не удалось удалить") {
 		t.Fatal("ошибка должна оставить диалог и запись в списке")
 	}
 	repo.deleteErr = nil
 	model, remove = updateApp(model, keypress('y'))
 	model, _ = updateApp(model, remove())
-	if model.deleteDialog != nil || len(model.students.students) != 0 || repo.deleteCalls != 2 {
+	if model.students.deleteDialog != nil || len(model.students.students) != 0 || repo.deleteCalls != 2 {
 		t.Fatal("повторное удаление после ошибки не удалось")
 	}
 }
@@ -101,17 +101,17 @@ func TestDeleteStudentCancelAndErrors(t *testing.T) {
 func TestDeleteStudentUnavailable(t *testing.T) {
 	model := NewApp(context.Background(), app.NewStudentService(&studentRepoStub{}), nil)
 	model, _ = updateApp(model, keypress('d'))
-	if model.deleteDialog != nil {
+	if model.students.deleteDialog != nil {
 		t.Fatal("нельзя открыть диалог во время загрузки")
 	}
 	model, _ = updateApp(model, model.Init()())
 	model, cmd := updateApp(model, keypress('d'))
-	if model.deleteDialog != nil || cmd != nil {
+	if model.students.deleteDialog != nil || cmd != nil {
 		t.Fatal("нельзя открыть диалог в пустом списке")
 	}
 	model, _ = updateApp(model, keypress('n'))
 	model, _ = updateApp(model, keypress('d'))
-	if model.deleteDialog != nil || model.form.name.Value() != "d" {
+	if model.students.deleteDialog != nil || model.students.form.name.Value() != "d" {
 		t.Fatal("d внутри поля имени должен вводиться как обычная буква")
 	}
 }

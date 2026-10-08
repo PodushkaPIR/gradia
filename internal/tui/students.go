@@ -2,9 +2,11 @@ package tui
 
 import (
 	"context"
+	"errors"
 	"slices"
 	"strings"
 
+	"charm.land/bubbles/v2/key"
 	tea "charm.land/bubbletea/v2"
 
 	"github.com/shesh/gradia/internal/app"
@@ -20,18 +22,23 @@ type studentsLoadFailedMsg struct {
 }
 
 type studentsModel struct {
-	ctx      context.Context
-	service  *app.StudentService
-	students []domain.Student
-	cursor   int
-	loading  bool
-	err      error
-	height   int
-	selectID domain.StudentID
+	ctx           context.Context
+	service       *app.StudentService
+	students      []domain.Student
+	cursor        int
+	loading       bool
+	err           error
+	height        int
+	width         int
+	selectID      domain.StudentID
+	form          *nameForm
+	editStudentID domain.StudentID
+	deleteDialog  *studentDeleteModel
+	keys          studentsKeyMap
 }
 
 func newStudentsModel(ctx context.Context, service *app.StudentService) studentsModel {
-	return studentsModel{ctx: ctx, service: service, loading: true, height: 10}
+	return studentsModel{ctx: ctx, service: service, loading: true, height: 10, width: 80, keys: newStudentsKeyMap()}
 }
 
 func (m studentsModel) Init() tea.Cmd {
@@ -49,9 +56,9 @@ func loadStudentsCmd(ctx context.Context, service *app.StudentService) tea.Cmd {
 	return func() tea.Msg {
 		students, err := service.List(ctx)
 		if err != nil {
-			return studentsLoadFailedMsg{err: err}
+			return routeToStudents(studentsLoadFailedMsg{err: err})
 		}
-		return studentsLoadedMsg{students: students}
+		return routeToStudents(studentsLoadedMsg{students: students})
 	}
 }
 
@@ -71,10 +78,27 @@ func (m studentsModel) Update(msg tea.Msg) (studentsModel, tea.Cmd) {
 			}
 			m.selectID = 0
 		}
+		return m, nil
 	case studentsLoadFailedMsg:
 		m.loading = false
 		m.err = msg.err
+		return m, nil
+	case studentSavedMsg:
+		m.form = nil
+		m.editStudentID = 0
+		m.loading = true
+		m.err = nil
+		m.selectID = msg.student.ID
+		return m, m.Init()
+	case studentSaveFailedMsg:
+		if m.form != nil {
+			form, cmd := m.form.fail(msg.err, m.saveError(msg.err))
+			m.form = &form
+			return m, cmd
+		}
+		return m, nil
 	case studentDeletedMsg:
+		m.deleteDialog = nil
 		for i, student := range m.students {
 			if student.ID == msg.id {
 				m.students = slices.Delete(slices.Clone(m.students), i, i+1)
@@ -83,32 +107,100 @@ func (m studentsModel) Update(msg tea.Msg) (studentsModel, tea.Cmd) {
 				break
 			}
 		}
+		return m, nil
 	case tea.WindowSizeMsg:
 		m.height = max(1, msg.Height-8)
-	case tea.KeyPressMsg:
-		switch msg.String() {
-		case "r":
+		m.width = msg.Width
+	}
+	if m.deleteDialog != nil {
+		if pressed, ok := msg.(tea.KeyPressMsg); ok && m.InputMode().allowsCancel() && key.Matches(pressed, m.deleteDialog.keys.Cancel.Binding) {
+			m.deleteDialog = nil
+			return m, nil
+		}
+		dialog, cmd := m.deleteDialog.Update(msg)
+		m.deleteDialog = &dialog
+		return m, cmd
+	}
+	if m.form != nil {
+		form, action, cmd := m.form.Update(msg)
+		m.form = &form
+		switch action {
+		case formCancel:
+			m.form = nil
+			m.editStudentID = 0
+			return m, nil
+		case formSubmit:
+			return m, saveStudentCmd(m.ctx, m.service, m.editStudentID, form.name.Value())
+		}
+		return m, cmd
+	}
+	if pressed, ok := msg.(tea.KeyPressMsg); ok {
+		switch {
+		case key.Matches(pressed, m.keys.Create.Binding):
+			if !m.loading {
+				form := m.newStudentNameForm("Новый ученик")
+				cmd := form.Init()
+				m.editStudentID = 0
+				m.form = &form
+				return m, cmd
+			}
+		case key.Matches(pressed, m.keys.Edit.Binding):
+			if student, ok := m.selectedStudent(); ok {
+				form := m.newStudentNameForm("Редактирование ученика")
+				form.name.SetValue(student.Name)
+				form.name.CursorEnd()
+				cmd := form.Init()
+				m.editStudentID = student.ID
+				m.form = &form
+				return m, cmd
+			}
+		case key.Matches(pressed, m.keys.Delete.Binding):
+			if student, ok := m.selectedStudent(); ok {
+				dialog := newStudentDelete(m.ctx, m.service, student)
+				m.deleteDialog = &dialog
+			}
+		case key.Matches(pressed, m.keys.Reload.Binding):
 			if !m.loading {
 				m.loading = true
 				m.err = nil
 				return m, m.Init()
 			}
-		case "j", "down":
+		case key.Matches(pressed, m.keys.Down.Binding):
 			m.cursor = max(0, min(m.cursor+1, len(m.students)-1))
-		case "k", "up":
+		case key.Matches(pressed, m.keys.Up.Binding):
 			m.cursor = max(0, m.cursor-1)
 		}
 	}
 	return m, nil
 }
 
+func (m studentsModel) newStudentNameForm(title string) nameForm {
+	return newNameForm(nameFormConfig{Title: title, Label: "Имя", Placeholder: "Имя ученика", Limit: domain.StudentNameMaxLength, Width: m.width})
+}
+
+func (m studentsModel) saveError(err error) string {
+	if errors.Is(err, domain.ErrStudentNameRequired) || errors.Is(err, domain.ErrStudentNameTooLong) {
+		return err.Error()
+	}
+	if errors.Is(err, domain.ErrStudentNotFound) {
+		return "Ученик больше не существует. Нажмите " + m.form.keys.Cancel.Help().Key + " и обновите список по " + m.keys.Reload.Help().Key + "."
+	}
+	return "Не удалось сохранить ученика. Нажмите " + m.form.keys.Save.Help().Key + " для повторной попытки."
+}
+
 func (m studentsModel) View() string {
+	if m.deleteDialog != nil {
+		return m.deleteDialog.View()
+	}
+	if m.form != nil {
+		return m.form.View()
+	}
 	const title = "Ученики\n\n"
 	if m.loading {
 		return title + "Загрузка…"
 	}
 	if m.err != nil {
-		return title + "Не удалось загрузить учеников. Нажмите r для повторной попытки."
+		return title + "Не удалось загрузить учеников. Нажмите " + m.keys.Reload.Help().Key + " для повторной попытки."
 	}
 	if len(m.students) == 0 {
 		return title + "Список пока пуст."
@@ -131,4 +223,36 @@ func (m studentsModel) View() string {
 		text.WriteString(m.students[i].Name)
 	}
 	return text.String()
+}
+
+func (m studentsModel) InputMode() inputMode {
+	if m.deleteDialog != nil {
+		return m.deleteDialog.InputMode()
+	}
+	if m.form != nil {
+		return m.form.InputMode()
+	}
+	// Загрузка списка идёт в фоне и не захватывает клавиатуру.
+	return inputNavigation
+}
+
+func (m studentsModel) ShortHelp() string {
+	switch m.InputMode() {
+	case inputBusy:
+		return ""
+	case inputConfirmation:
+		return shortHelp(m.deleteDialog.keys.Confirm, m.deleteDialog.keys.Cancel)
+	case inputText:
+		return m.form.ShortHelp()
+	}
+	return shortHelp(m.keys.Create, m.keys.Templates, m.keys.Help)
+}
+
+func (m studentsModel) FullHelp() (string, []shortcut) {
+	if m.deleteDialog != nil {
+		keys := m.deleteDialog.keys
+		return "Удаление ученика", []shortcut{keys.Confirm, keys.Cancel, keys.Help}
+	}
+	keys := m.keys
+	return "Ученики", []shortcut{keys.helpBinding(), keys.Create, keys.Edit, keys.Delete, keys.Templates, keys.Reload, keys.Help, keys.Quit}
 }

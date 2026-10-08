@@ -26,7 +26,7 @@ func TestCreateStudentFormFlow(t *testing.T) {
 	model := NewApp(context.Background(), app.NewStudentService(repo), nil)
 	model, _ = updateApp(model, model.Init()())
 	model, _ = updateApp(model, keypress('n'))
-	if model.form == nil || !model.form.name.Focused() {
+	if model.students.form == nil || !model.students.form.name.Focused() {
 		t.Fatal("форма не открылась или поле не получило фокус")
 	}
 
@@ -34,12 +34,12 @@ func TestCreateStudentFormFlow(t *testing.T) {
 	model, _ = updateApp(model, keypress('q'))
 	model, _ = updateApp(model, keypress('n'))
 	model, _ = updateApp(model, keypress('r'))
-	if model.form.name.Value() != "qnr" || model.students.cursor != 0 {
+	if model.students.form.name.Value() != "qnr" || model.students.cursor != 0 {
 		t.Fatal("shortcuts перехватили ввод текста")
 	}
-	model.form.name.SetValue("  Иван  ")
+	model.students.form.name.SetValue("  Иван  ")
 	model, save := updateApp(model, tea.KeyPressMsg{Code: tea.KeyEnter})
-	if save == nil || !model.form.saving || repo.createCalls != 0 {
+	if save == nil || !model.students.form.saving || repo.createCalls != 0 {
 		t.Fatal("сохранение должно запускаться только внутри Cmd")
 	}
 	model, duplicate := updateApp(model, tea.KeyPressMsg{Code: tea.KeyEnter})
@@ -47,11 +47,11 @@ func TestCreateStudentFormFlow(t *testing.T) {
 		t.Fatal("повторный Enter запустил дублирующее сохранение")
 	}
 	model, _ = updateApp(model, tea.KeyPressMsg{Code: tea.KeyEscape})
-	if model.form == nil {
+	if model.students.form == nil {
 		t.Fatal("нельзя отменять уже выполняющееся сохранение")
 	}
 	model, reload := updateApp(model, save())
-	if model.form != nil || reload == nil || !model.students.loading || repo.createCalls != 1 {
+	if model.students.form != nil || reload == nil || !model.students.loading || repo.createCalls != 1 {
 		t.Fatal("после сохранения ожидаются закрытие формы и загрузка списка")
 	}
 	model, _ = updateApp(model, reload())
@@ -65,18 +65,18 @@ func TestStudentFormErrorsAndCancel(t *testing.T) {
 	model := NewApp(context.Background(), app.NewStudentService(repo), nil)
 	model, _ = updateApp(model, model.Init()())
 	model, _ = updateApp(model, keypress('n'))
-	model.form.name.SetValue("   ")
+	model.students.form.name.SetValue("   ")
 	model, save := updateApp(model, tea.KeyPressMsg{Code: tea.KeyEnter})
 	model, _ = updateApp(model, save())
-	if model.form == nil || model.form.saving || !errors.Is(model.form.err, domain.ErrStudentNameRequired) || repo.createCalls != 0 {
+	if model.students.form == nil || model.students.form.saving || !errors.Is(model.students.form.err, domain.ErrStudentNameRequired) || repo.createCalls != 0 {
 		t.Fatal("пустое имя должно остаться в форме с ошибкой и без записи в БД")
 	}
 
-	model.form.name.SetValue("Иван")
+	model.students.form.name.SetValue("Иван")
 	repo.createErr = errors.New("database unavailable")
 	model, save = updateApp(model, tea.KeyPressMsg{Code: tea.KeyEnter})
 	model, _ = updateApp(model, save())
-	if model.form == nil || model.form.saving || model.form.name.Value() != "Иван" || !strings.Contains(model.View().Content, "Не удалось сохранить") {
+	if model.students.form == nil || model.students.form.saving || model.students.form.name.Value() != "Иван" || !strings.Contains(model.View().Content, "Не удалось сохранить") {
 		t.Fatal("ошибка хранилища должна сохранять введённое имя")
 	}
 
@@ -84,14 +84,14 @@ func TestStudentFormErrorsAndCancel(t *testing.T) {
 	model, save = updateApp(model, tea.KeyPressMsg{Code: tea.KeyEnter})
 	model, reload := updateApp(model, save())
 	model, _ = updateApp(model, reload())
-	if len(repo.students) != 1 || model.form != nil {
+	if len(repo.students) != 1 || model.students.form != nil {
 		t.Fatal("не удалось повторить сохранение после ошибки")
 	}
 
 	model, _ = updateApp(model, keypress('n'))
 	model, _ = updateApp(model, keypress('x'))
 	model, cancel := updateApp(model, tea.KeyPressMsg{Code: tea.KeyEscape})
-	if model.form != nil || cancel != nil || len(repo.students) != 1 {
+	if model.students.form != nil || cancel != nil || len(repo.students) != 1 {
 		t.Fatal("Esc должен закрыть форму без сохранения")
 	}
 

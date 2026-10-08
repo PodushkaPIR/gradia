@@ -109,7 +109,7 @@ func TestStudentsLoadAndRetry(t *testing.T) {
 	if model.students.cursor != 1 {
 		t.Fatal("курсор не переместился")
 	}
-	updated, _ = model.Update(studentsLoadedMsg{})
+	updated, _ = model.Update(routeToStudents(studentsLoadedMsg{}))
 	model = updated.(App)
 	if model.students.cursor != 0 || !strings.Contains(model.View().Content, "Список пока пуст") {
 		t.Fatal("пустой список должен сбросить курсор")

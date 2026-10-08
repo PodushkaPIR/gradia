@@ -57,7 +57,7 @@ func TestTopicTreeNavigationAndCreation(t *testing.T) {
 		t.Fatal("Back должен сохранить выбор на прежнем уровне")
 	}
 	model, _ = updateApp(model, keypress('n'))
-	if model.templates.topics.form.parentID != 1 {
+	if model.templates.topics.editTopicID != 0 || model.templates.topics.currentParentID() != 1 {
 		t.Fatal("n должен создавать тему внутри текущей темы, а не выбранного потомка")
 	}
 	model.templates.topics.form.name.SetValue("Новый цикл")
@@ -100,7 +100,7 @@ func TestTopicTreeFifthLevel(t *testing.T) {
 	model, _ = updateApp(model, tea.KeyPressMsg{Code: tea.KeyEscape})
 	model, _ = updateApp(model, tea.KeyPressMsg{Code: tea.KeyEscape})
 	model, _ = updateApp(model, keypress('n'))
-	if model.templates.topics.form == nil || model.templates.topics.form.parentID != 6 {
+	if model.templates.topics.form == nil || model.templates.topics.editTopicID != 0 || model.templates.topics.currentParentID() != 6 {
 		t.Fatal("на четвёртом уровне создание должно быть доступно")
 	}
 }

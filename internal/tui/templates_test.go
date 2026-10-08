@@ -106,7 +106,7 @@ func TestTemplatesCreateAndReturn(t *testing.T) {
 	for _, key := range []rune{'q', 'p', 'n', 'r'} {
 		model, _ = updateApp(model, keypress(key))
 	}
-	if model.templates.form.name.Value() != "qpnr" || !model.showTemplates || model.form != nil {
+	if model.templates.form.name.Value() != "qpnr" || !model.showTemplates || model.students.form != nil {
 		t.Fatal("shortcuts перехватили ввод в форме шаблона")
 	}
 	model.templates.form.name.SetValue("  Python с нуля  ")

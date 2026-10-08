@@ -23,12 +23,12 @@ func TestHelpCapturesKeysAndPreservesScreen(t *testing.T) {
 	for _, key := range []rune{'n', 'e', 'd', 'p', 'r', 'q', 'j', 'k'} {
 		var cmd tea.Cmd
 		model, cmd = updateApp(model, keypress(key))
-		if cmd != nil || model.form != nil || model.deleteDialog != nil || model.showTemplates || model.students.cursor != 1 {
+		if cmd != nil || model.students.form != nil || model.students.deleteDialog != nil || model.showTemplates || model.students.cursor != 1 {
 			t.Fatalf("помощь пропустила клавишу %q в основной экран", key)
 		}
 	}
 	// Асинхронные данные продолжают доставляться, не закрывая помощь.
-	model, _ = updateApp(model, studentsLoadedMsg{students: repo.students})
+	model, _ = updateApp(model, routeToStudents(studentsLoadedMsg{students: repo.students}))
 	if model.help == nil {
 		t.Fatal("результат загрузки закрыл помощь")
 	}
@@ -54,7 +54,7 @@ func TestQuestionMarkIsTextInForms(t *testing.T) {
 	model, _ = updateApp(model, model.Init()())
 	model, _ = updateApp(model, keypress('n'))
 	model, _ = updateApp(model, keypress('?'))
-	if model.help != nil || model.form.name.Value() != "?" {
+	if model.help != nil || model.students.form.name.Value() != "?" {
 		t.Fatal("? в форме ученика должен вводиться как символ")
 	}
 	model, _ = updateApp(model, tea.KeyPressMsg{Code: tea.KeyEscape})

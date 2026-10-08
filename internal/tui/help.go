@@ -3,6 +3,7 @@ package tui
 import (
 	"strings"
 
+	"charm.land/bubbles/v2/key"
 	tea "charm.land/bubbletea/v2"
 )
 
@@ -11,27 +12,15 @@ type helpModel struct {
 	lines  []string
 	offset int
 	height int
+	keys   helpKeyMap
 }
 
 func (a App) contextHelp() helpModel {
-	title := "Ученики"
-	text := "↑/↓, j/k    Передвижение\nn           Создать ученика\ne           Редактировать имя\nd           Удалить с подтверждением\np           Открыть шаблоны\nr           Обновить список\n?           Помощь\nq           Выход"
+	title, bindings := a.students.FullHelp()
 	if a.showTemplates {
-		title = "Шаблоны обучения"
-		text = "↑/↓, j/k    Передвижение\nEnter       Открыть темы шаблона\nn           Создать шаблон\nr           Обновить список\nEsc         Вернуться к ученикам\n?           Помощь\nq           Выход"
-		if a.templates.topics != nil {
-			title = "Темы шаблона"
-			text = "↑/↓, j/k    Передвижение\nEnter       Открыть тему"
-			if a.templates.topics.canCreate() {
-				text += "\nn           Создать тему на текущем уровне"
-			}
-			text += "\nr           Обновить список\nEsc         На уровень назад\n?           Помощь\nq           Выход"
-		}
-	} else if a.deleteDialog != nil {
-		title = "Удаление ученика"
-		text = "y           Подтвердить удаление\nn, Esc      Отменить удаление\n?           Помощь"
+		title, bindings = a.templates.FullHelp()
 	}
-	return helpModel{title: title, lines: strings.Split(text, "\n"), height: max(1, a.height-6)}
+	return helpModel{title: title, lines: fullHelpLines(bindings), height: max(1, a.height-6), keys: newHelpKeyMap()}
 }
 
 func (m helpModel) Update(msg tea.Msg) helpModel {
@@ -39,14 +28,14 @@ func (m helpModel) Update(msg tea.Msg) helpModel {
 	case tea.WindowSizeMsg:
 		m.height = max(1, msg.Height-6)
 	case tea.KeyPressMsg:
-		switch msg.String() {
-		case "j", "down":
+		switch {
+		case key.Matches(msg, m.keys.Down.Binding):
 			m.offset++
-		case "k", "up":
+		case key.Matches(msg, m.keys.Up.Binding):
 			m.offset--
-		case "pgdown":
+		case key.Matches(msg, m.keys.PageDown.Binding):
 			m.offset += m.height
-		case "pgup":
+		case key.Matches(msg, m.keys.PageUp.Binding):
 			m.offset -= m.height
 		}
 	}
