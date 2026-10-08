@@ -9,6 +9,17 @@ import (
 //go:embed migrations/0001_students.sql
 var studentsMigration string
 
+//go:embed migrations/0002_templates.sql
+var templatesMigration string
+
+//go:embed migrations/0003_template_topics.sql
+var templateTopicsMigration string
+
+//go:embed migrations/0004_topic_hierarchy.sql
+var topicHierarchyMigration string
+
+var schemaMigrations = []string{studentsMigration, templatesMigration, templateTopicsMigration, topicHierarchyMigration}
+
 func (s *Store) migrate(ctx context.Context) error {
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
@@ -27,7 +38,7 @@ func (s *Store) migrate(ctx context.Context) error {
 		return err
 	}
 
-	migrations := []string{studentsMigration}
+	migrations := schemaMigrations
 	if version > len(migrations) {
 		return fmt.Errorf("версия БД %d новее поддерживаемой %d", version, len(migrations))
 	}

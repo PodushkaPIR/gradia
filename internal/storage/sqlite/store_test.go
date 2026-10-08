@@ -73,7 +73,7 @@ func TestStudentsPersistAcrossReopen(t *testing.T) {
 		t.Fatalf("время изменилось: %+v", student)
 	}
 	var count int
-	if err := store.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM schema_migrations`).Scan(&count); err != nil || count != 1 {
+	if err := store.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM schema_migrations`).Scan(&count); err != nil || count != len(schemaMigrations) {
 		t.Fatalf("миграция должна применяться однократно: count=%d, err=%v", count, err)
 	}
 }
@@ -86,7 +86,7 @@ func TestNewerSchemaIsRejected(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { store.Close() })
-	if _, err := store.db.ExecContext(ctx, `INSERT INTO schema_migrations (version) VALUES (?)`, 2); err != nil {
+	if _, err := store.db.ExecContext(ctx, `INSERT INTO schema_migrations (version) VALUES (?)`, len(schemaMigrations)+1); err != nil {
 		t.Fatal(err)
 	}
 	if err := store.Close(); err != nil {
