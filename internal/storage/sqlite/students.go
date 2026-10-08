@@ -58,6 +58,21 @@ func (s *Store) RenameStudent(ctx context.Context, id domain.StudentID, name str
 	return student, err
 }
 
+func (s *Store) DeleteStudent(ctx context.Context, id domain.StudentID) error {
+	result, err := s.db.ExecContext(ctx, `DELETE FROM students WHERE id = ?`, id)
+	if err != nil {
+		return err
+	}
+	count, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if count == 0 {
+		return domain.ErrStudentNotFound
+	}
+	return nil
+}
+
 func scanStudent(row interface{ Scan(...any) error }) (domain.Student, error) {
 	var student domain.Student
 	var grade sql.NullString

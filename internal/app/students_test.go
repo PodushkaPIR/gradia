@@ -13,6 +13,7 @@ import (
 type studentRepositoryStub struct {
 	created []domain.Student
 	renamed []domain.Student
+	deleted []domain.StudentID
 	err     error
 }
 
@@ -30,6 +31,42 @@ func (r *studentRepositoryStub) RenameStudent(_ context.Context, id domain.Stude
 	student := domain.Student{ID: id, Name: name, UpdatedAt: updatedAt}
 	r.renamed = append(r.renamed, student)
 	return student, r.err
+}
+
+func (r *studentRepositoryStub) DeleteStudent(_ context.Context, id domain.StudentID) error {
+	r.deleted = append(r.deleted, id)
+	return r.err
+}
+
+func TestDeleteStudent(t *testing.T) {
+	for _, tc := range []struct {
+		name    string
+		id      domain.StudentID
+		repoErr error
+		wantErr error
+		calls   int
+	}{
+		{name: "valid", id: 5, calls: 1},
+		{name: "zero ID", id: 0, wantErr: domain.ErrStudentNotFound},
+		{name: "negative ID", id: -1, wantErr: domain.ErrStudentNotFound},
+		{name: "missing", id: 5, repoErr: domain.ErrStudentNotFound, wantErr: domain.ErrStudentNotFound, calls: 1},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			repo := &studentRepositoryStub{err: tc.repoErr}
+			err := NewStudentService(repo).Delete(context.Background(), tc.id)
+			if !errors.Is(err, tc.wantErr) || len(repo.deleted) != tc.calls {
+				t.Fatalf("err=%v, calls=%d", err, len(repo.deleted))
+			}
+			if tc.calls == 1 && repo.deleted[0] != tc.id {
+				t.Fatal("в репозиторий передан другой ID")
+			}
+		})
+	}
+	want := errors.New("storage failed")
+	err := NewStudentService(&studentRepositoryStub{err: want}).Delete(context.Background(), 5)
+	if !errors.Is(err, want) {
+		t.Fatalf("ошибка репозитория потеряна: %v", err)
+	}
 }
 
 func TestCreateStudentValidation(t *testing.T) {

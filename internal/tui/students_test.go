@@ -3,6 +3,7 @@ package tui
 import (
 	"context"
 	"errors"
+	"slices"
 	"sort"
 	"strings"
 	"testing"
@@ -22,6 +23,8 @@ type studentRepoStub struct {
 	createErr   error
 	renameCalls int
 	renameErr   error
+	deleteCalls int
+	deleteErr   error
 }
 
 func (r *studentRepoStub) ListStudents(context.Context) ([]domain.Student, error) {
@@ -54,6 +57,20 @@ func (r *studentRepoStub) RenameStudent(_ context.Context, id domain.StudentID, 
 		}
 	}
 	return domain.Student{}, domain.ErrStudentNotFound
+}
+
+func (r *studentRepoStub) DeleteStudent(_ context.Context, id domain.StudentID) error {
+	r.deleteCalls++
+	if r.deleteErr != nil {
+		return r.deleteErr
+	}
+	for i, student := range r.students {
+		if student.ID == id {
+			r.students = slices.Delete(slices.Clone(r.students), i, i+1)
+			return nil
+		}
+	}
+	return domain.ErrStudentNotFound
 }
 
 func TestStudentsLoadAndRetry(t *testing.T) {

@@ -11,6 +11,7 @@ type StudentRepository interface {
 	ListStudents(context.Context) ([]domain.Student, error)
 	CreateStudent(context.Context, domain.Student) (domain.Student, error)
 	RenameStudent(context.Context, domain.StudentID, string, time.Time) (domain.Student, error)
+	DeleteStudent(context.Context, domain.StudentID) error
 }
 
 type StudentService struct {
@@ -42,4 +43,11 @@ func (s *StudentService) Rename(ctx context.Context, id domain.StudentID, name s
 		return domain.Student{}, err
 	}
 	return s.repo.RenameStudent(ctx, id, name, time.Now().UTC().Truncate(time.Millisecond))
+}
+
+func (s *StudentService) Delete(ctx context.Context, id domain.StudentID) error {
+	if id <= 0 {
+		return domain.ErrStudentNotFound
+	}
+	return s.repo.DeleteStudent(ctx, id)
 }
