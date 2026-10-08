@@ -62,13 +62,21 @@ func NewTemplateTopic(templateID TemplateID, name string) (TemplateTopic, error)
 	if templateID <= 0 {
 		return TemplateTopic{}, ErrTemplateNotFound
 	}
-	name = strings.TrimSpace(name)
-	if name == "" {
-		return TemplateTopic{}, ErrTopicNameRequired
-	}
-	if utf8.RuneCountInString(name) > TopicNameMaxLength {
-		return TemplateTopic{}, ErrTopicNameTooLong
+	name, err := NormalizeTopicName(name)
+	if err != nil {
+		return TemplateTopic{}, err
 	}
 	now := time.Now().UTC().Truncate(time.Millisecond)
 	return TemplateTopic{TemplateID: templateID, Name: name, CreatedAt: now, UpdatedAt: now}, nil
+}
+
+func NormalizeTopicName(name string) (string, error) {
+	name = strings.TrimSpace(name)
+	if name == "" {
+		return "", ErrTopicNameRequired
+	}
+	if utf8.RuneCountInString(name) > TopicNameMaxLength {
+		return "", ErrTopicNameTooLong
+	}
+	return name, nil
 }

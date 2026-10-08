@@ -2,6 +2,7 @@ package app
 
 import (
 	"context"
+	"time"
 
 	"github.com/shesh/gradia/internal/domain"
 )
@@ -11,6 +12,7 @@ type TemplateRepository interface {
 	CreateTemplate(context.Context, domain.Template) (domain.Template, error)
 	ListTemplateTopics(context.Context, domain.TemplateID) ([]domain.TemplateTopic, error)
 	CreateTemplateTopic(context.Context, domain.TemplateTopic) (domain.TemplateTopic, error)
+	RenameTemplateTopic(context.Context, domain.TemplateID, domain.TemplateTopicID, string, time.Time) (domain.TemplateTopic, error)
 }
 
 type TemplateService struct {
@@ -69,4 +71,18 @@ func (s *TemplateService) AddSubtopic(ctx context.Context, id domain.TemplateID,
 	}
 	topic.ParentID = &parentID
 	return s.repo.CreateTemplateTopic(ctx, topic)
+}
+
+func (s *TemplateService) RenameTopic(ctx context.Context, templateID domain.TemplateID, topicID domain.TemplateTopicID, name string) (domain.TemplateTopic, error) {
+	if templateID <= 0 {
+		return domain.TemplateTopic{}, domain.ErrTemplateNotFound
+	}
+	if topicID <= 0 {
+		return domain.TemplateTopic{}, domain.ErrTopicNotFound
+	}
+	name, err := domain.NormalizeTopicName(name)
+	if err != nil {
+		return domain.TemplateTopic{}, err
+	}
+	return s.repo.RenameTemplateTopic(ctx, templateID, topicID, name, time.Now().UTC().Truncate(time.Millisecond))
 }

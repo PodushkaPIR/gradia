@@ -5,6 +5,7 @@ import (
 	"errors"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/shesh/gradia/internal/domain"
 )
@@ -15,6 +16,7 @@ type templateRepositoryStub struct {
 	topicCalls int
 	listedID   domain.TemplateID
 	topics     []domain.TemplateTopic
+	renamed    []domain.TemplateTopic
 }
 
 func (r *templateRepositoryStub) ListTemplates(context.Context) ([]domain.Template, error) {
@@ -41,6 +43,12 @@ func (r *templateRepositoryStub) ListTemplateTopics(_ context.Context, id domain
 func (r *templateRepositoryStub) CreateTemplateTopic(_ context.Context, topic domain.TemplateTopic) (domain.TemplateTopic, error) {
 	r.topicCalls++
 	topic.ID = 1
+	return topic, r.err
+}
+
+func (r *templateRepositoryStub) RenameTemplateTopic(_ context.Context, templateID domain.TemplateID, topicID domain.TemplateTopicID, name string, updatedAt time.Time) (domain.TemplateTopic, error) {
+	topic := domain.TemplateTopic{ID: topicID, TemplateID: templateID, Name: name, UpdatedAt: updatedAt}
+	r.renamed = append(r.renamed, topic)
 	return topic, r.err
 }
 

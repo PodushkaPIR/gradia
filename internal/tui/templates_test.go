@@ -7,6 +7,7 @@ import (
 	"sort"
 	"strings"
 	"testing"
+	"time"
 
 	tea "charm.land/bubbletea/v2"
 
@@ -25,6 +26,8 @@ type templateRepoStub struct {
 	topicCreateErr   error
 	topicsLoadCalls  int
 	topicCreateCalls int
+	topicRenameCalls int
+	topicRenameErr   error
 }
 
 func (r *templateRepoStub) ListTemplates(context.Context) ([]domain.Template, error) {
@@ -67,6 +70,22 @@ func (r *templateRepoStub) CreateTemplateTopic(_ context.Context, topic domain.T
 	}
 	r.topics = append(r.topics, topic)
 	return topic, nil
+}
+
+func (r *templateRepoStub) RenameTemplateTopic(_ context.Context, templateID domain.TemplateID, topicID domain.TemplateTopicID, name string, updatedAt time.Time) (domain.TemplateTopic, error) {
+	r.topicRenameCalls++
+	if r.topicRenameErr != nil {
+		return domain.TemplateTopic{}, r.topicRenameErr
+	}
+	for i, topic := range r.topics {
+		if topic.TemplateID == templateID && topic.ID == topicID {
+			topic.Name, topic.UpdatedAt = name, updatedAt
+			r.topics = slices.Clone(r.topics)
+			r.topics[i] = topic
+			return topic, nil
+		}
+	}
+	return domain.TemplateTopic{}, domain.ErrTopicNotFound
 }
 
 func TestTemplatesCreateAndReturn(t *testing.T) {

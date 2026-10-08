@@ -23,18 +23,10 @@ func (s *Store) ListTemplateTopics(ctx context.Context, id domain.TemplateID) ([
 	defer rows.Close()
 	topics := make([]domain.TemplateTopic, 0)
 	for rows.Next() {
-		var topic domain.TemplateTopic
-		var parent sql.NullInt64
-		var created, updated int64
-		if err := rows.Scan(&topic.ID, &topic.TemplateID, &parent, &topic.Name, &topic.Position, &created, &updated); err != nil {
+		topic, err := scanTemplateTopic(rows)
+		if err != nil {
 			return nil, err
 		}
-		if parent.Valid {
-			id := domain.TemplateTopicID(parent.Int64)
-			topic.ParentID = &id
-		}
-		topic.CreatedAt = time.UnixMilli(created).UTC()
-		topic.UpdatedAt = time.UnixMilli(updated).UTC()
 		topics = append(topics, topic)
 	}
 	return topics, rows.Err()
@@ -67,5 +59,34 @@ func (s *Store) CreateTemplateTopic(ctx context.Context, topic domain.TemplateTo
 		}
 		return domain.TemplateTopic{}, err
 	}
+	return topic, nil
+}
+
+func (s *Store) RenameTemplateTopic(ctx context.Context, templateID domain.TemplateID, topicID domain.TemplateTopicID, name string, updatedAt time.Time) (domain.TemplateTopic, error) {
+	row := s.db.QueryRowContext(ctx, `
+		UPDATE template_topics SET name = ?, updated_at = ?
+		WHERE template_id = ? AND id = ?
+		RETURNING id, template_id, parent_id, name, position, created_at, updated_at
+	`, name, updatedAt.UnixMilli(), templateID, topicID)
+	topic, err := scanTemplateTopic(row)
+	if errors.Is(err, sql.ErrNoRows) {
+		return domain.TemplateTopic{}, domain.ErrTopicNotFound
+	}
+	return topic, err
+}
+
+func scanTemplateTopic(row interface{ Scan(...any) error }) (domain.TemplateTopic, error) {
+	var topic domain.TemplateTopic
+	var parent sql.NullInt64
+	var created, updated int64
+	if err := row.Scan(&topic.ID, &topic.TemplateID, &parent, &topic.Name, &topic.Position, &created, &updated); err != nil {
+		return domain.TemplateTopic{}, err
+	}
+	if parent.Valid {
+		id := domain.TemplateTopicID(parent.Int64)
+		topic.ParentID = &id
+	}
+	topic.CreatedAt = time.UnixMilli(created).UTC()
+	topic.UpdatedAt = time.UnixMilli(updated).UTC()
 	return topic, nil
 }
