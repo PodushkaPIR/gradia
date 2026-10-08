@@ -39,6 +39,7 @@ func run() error {
 	defer cancel()
 
 	students := app.NewStudentService(store)
-	_, err = tea.NewProgram(tui.NewApp(ctx, students), tea.WithContext(ctx)).Run()
+	templates := app.NewTemplateService(store)
+	_, err = tea.NewProgram(tui.NewApp(ctx, students, templates), tea.WithContext(ctx)).Run()
 	return err
 }

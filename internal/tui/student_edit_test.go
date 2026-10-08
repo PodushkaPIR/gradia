@@ -14,7 +14,7 @@ import (
 
 func TestEditStudentFormFlow(t *testing.T) {
 	repo := &studentRepoStub{students: []domain.Student{{ID: 1, Name: "Анна"}, {ID: 2, Name: "Иван"}}}
-	model := NewApp(context.Background(), app.NewStudentService(repo))
+	model := NewApp(context.Background(), app.NewStudentService(repo), nil)
 	model, _ = updateApp(model, model.Init()())
 	model, _ = updateApp(model, keypress('j'))
 	model, _ = updateApp(model, keypress('e'))
@@ -51,7 +51,7 @@ func TestEditStudentFormFlow(t *testing.T) {
 
 func TestEditStudentCancelAndErrors(t *testing.T) {
 	repo := &studentRepoStub{students: []domain.Student{{ID: 1, Name: "Анна"}}}
-	model := NewApp(context.Background(), app.NewStudentService(repo))
+	model := NewApp(context.Background(), app.NewStudentService(repo), nil)
 	model, _ = updateApp(model, model.Init()())
 	model, _ = updateApp(model, keypress('e'))
 	model.form.name.SetValue("Другое имя")
@@ -93,7 +93,7 @@ func TestEditStudentUnavailable(t *testing.T) {
 		{name: "load failed", err: errors.New("storage failed")},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			model := NewApp(context.Background(), app.NewStudentService(&studentRepoStub{}))
+			model := NewApp(context.Background(), app.NewStudentService(&studentRepoStub{}), nil)
 			model.students.loading = tc.loading
 			model.students.err = tc.err
 			model, cmd := updateApp(model, keypress('e'))

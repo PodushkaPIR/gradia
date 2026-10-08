@@ -2,6 +2,7 @@ package tui
 
 import (
 	"context"
+	"slices"
 	"strings"
 
 	tea "charm.land/bubbletea/v2"
@@ -73,6 +74,15 @@ func (m studentsModel) Update(msg tea.Msg) (studentsModel, tea.Cmd) {
 	case studentsLoadFailedMsg:
 		m.loading = false
 		m.err = msg.err
+	case studentDeletedMsg:
+		for i, student := range m.students {
+			if student.ID == msg.id {
+				m.students = slices.Delete(slices.Clone(m.students), i, i+1)
+				m.cursor = max(0, min(m.cursor, len(m.students)-1))
+				m.selectID = 0
+				break
+			}
+		}
 	case tea.WindowSizeMsg:
 		m.height = max(1, msg.Height-8)
 	case tea.KeyPressMsg:
@@ -117,6 +127,7 @@ func (m studentsModel) View() string {
 		} else {
 			text.WriteString("  ")
 		}
+		text.WriteString("• ")
 		text.WriteString(m.students[i].Name)
 	}
 	return text.String()
