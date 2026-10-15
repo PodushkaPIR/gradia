@@ -6,6 +6,9 @@ import (
 	"errors"
 	"time"
 
+	driver "modernc.org/sqlite"
+	sqlite3 "modernc.org/sqlite/lib"
+
 	"github.com/shesh/gradia/internal/domain"
 )
 
@@ -61,6 +64,14 @@ func (s *Store) RenameStudent(ctx context.Context, id domain.StudentID, name str
 func (s *Store) DeleteStudent(ctx context.Context, id domain.StudentID) error {
 	result, err := s.db.ExecContext(ctx, `DELETE FROM students WHERE id = ?`, id)
 	if err != nil {
+		var sqliteErr *driver.Error
+		if errors.As(err, &sqliteErr) {
+			switch sqliteErr.Code() {
+			case sqlite3.SQLITE_CONSTRAINT_FOREIGNKEY, sqlite3.SQLITE_CONSTRAINT_TRIGGER:
+				// SQLite также возвращает CONSTRAINT_TRIGGER для ON DELETE RESTRICT.
+				return domain.ErrStudentInUse
+			}
+		}
 		return err
 	}
 	count, err := result.RowsAffected()

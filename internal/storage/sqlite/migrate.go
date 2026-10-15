@@ -18,7 +18,16 @@ var templateTopicsMigration string
 //go:embed migrations/0004_topic_hierarchy.sql
 var topicHierarchyMigration string
 
-var schemaMigrations = []string{studentsMigration, templatesMigration, templateTopicsMigration, topicHierarchyMigration}
+//go:embed migrations/0005_student_routes.sql
+var studentRoutesMigration string
+
+//go:embed migrations/0006_route_progress.sql
+var routeProgressMigration string
+
+//go:embed migrations/0007_route_topic_notes.sql
+var routeTopicNotesMigration string
+
+var schemaMigrations = []string{studentsMigration, templatesMigration, templateTopicsMigration, topicHierarchyMigration, studentRoutesMigration, routeProgressMigration, routeTopicNotesMigration}
 
 func (s *Store) migrate(ctx context.Context) error {
 	tx, err := s.db.BeginTx(ctx, nil)

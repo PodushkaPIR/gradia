@@ -1,0 +1,1 @@
+ALTER TABLE route_topics ADD COLUMN notes_md TEXT NOT NULL DEFAULT '';
