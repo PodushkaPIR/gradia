@@ -219,7 +219,6 @@ func (m studentsModel) View() string {
 		} else {
 			text.WriteString("  ")
 		}
-		text.WriteString("• ")
 		text.WriteString(m.students[i].Name)
 	}
 	return text.String()

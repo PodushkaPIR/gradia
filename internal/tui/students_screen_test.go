@@ -42,7 +42,7 @@ func TestStudentsScreenOwnsCreateAndDelete(t *testing.T) {
 		t.Fatal("экран должен сам закрыть форму и запросить обновление списка")
 	}
 	screen, _ = screen.Update(studentsPayload(t, reload))
-	if screen.InputMode() != inputNavigation || !screen.InputMode().allowsHelp() || !strings.Contains(screen.View(), "> • Иван") {
+	if screen.InputMode() != inputNavigation || !screen.InputMode().allowsHelp() || !strings.Contains(screen.View(), "> Иван") {
 		t.Fatal("созданный ученик не выбран в списке")
 	}
 	screen, _ = screen.Update(keypress('d'))

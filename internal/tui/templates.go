@@ -185,7 +185,6 @@ func (m templatesModel) View() string {
 		} else {
 			text.WriteString("  ")
 		}
-		text.WriteString("• ")
 		text.WriteString(m.templates[i].Name)
 	}
 	return text.String()

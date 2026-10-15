@@ -124,11 +124,11 @@ func TestTemplatesCreateAndReturn(t *testing.T) {
 	}
 	model, reload := updateApp(model, save())
 	model, _ = updateApp(model, reload())
-	if model.templates.form != nil || templates.createCalls != 1 || !strings.Contains(model.View().Content, "> • Python с нуля") {
+	if model.templates.form != nil || templates.createCalls != 1 || !strings.Contains(model.View().Content, "> Python с нуля") {
 		t.Fatal("созданный шаблон не выбран в списке")
 	}
 	model, _ = updateApp(model, tea.KeyPressMsg{Code: tea.KeyEscape})
-	if model.showTemplates || model.students.cursor != 1 || !strings.Contains(model.View().Content, "> • Иван") {
+	if model.showTemplates || model.students.cursor != 1 || !strings.Contains(model.View().Content, "> Иван") {
 		t.Fatal("возврат должен сохранить выбор ученика")
 	}
 }

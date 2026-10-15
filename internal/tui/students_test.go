@@ -101,7 +101,7 @@ func TestStudentsLoadAndRetry(t *testing.T) {
 	}
 	updated, _ = model.Update(cmd())
 	model = updated.(App)
-	if model.students.loading || model.students.err != nil || !strings.Contains(model.View().Content, "> • Иван") {
+	if model.students.loading || model.students.err != nil || !strings.Contains(model.View().Content, "> Иван") {
 		t.Fatal("список не отображён после успешной повторной загрузки")
 	}
 	updated, _ = model.Update(tea.KeyPressMsg{Code: 'j', Text: "j"})

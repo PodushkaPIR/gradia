@@ -55,7 +55,7 @@ func TestCreateStudentFormFlow(t *testing.T) {
 		t.Fatal("после сохранения ожидаются закрытие формы и загрузка списка")
 	}
 	model, _ = updateApp(model, reload())
-	if model.students.cursor != 1 || !strings.Contains(model.View().Content, "> • Иван") {
+	if model.students.cursor != 1 || !strings.Contains(model.View().Content, "> Иван") {
 		t.Fatal("созданный ученик не выбран в списке")
 	}
 }

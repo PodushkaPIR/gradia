@@ -33,7 +33,7 @@ func TestHelpCapturesKeysAndPreservesScreen(t *testing.T) {
 		t.Fatal("результат загрузки закрыл помощь")
 	}
 	model, _ = updateApp(model, tea.KeyPressMsg{Code: tea.KeyEscape})
-	if model.help != nil || !strings.Contains(model.View().Content, "> • Иван") {
+	if model.help != nil || !strings.Contains(model.View().Content, "> Иван") {
 		t.Fatal("Esc должен возвращать на прежний экран с прежним выбором")
 	}
 	model, load := updateApp(model, keypress('p'))
