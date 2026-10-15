@@ -21,6 +21,8 @@ type templateRepoStub struct {
 	createErr        error
 	loadCalls        int
 	createCalls      int
+	renameCalls      int
+	renameErr        error
 	topics           []domain.TemplateTopic
 	topicsLoadErr    error
 	topicCreateErr   error
@@ -44,6 +46,23 @@ func (r *templateRepoStub) CreateTemplate(_ context.Context, template domain.Tem
 	r.templates = append(r.templates, template)
 	sort.Slice(r.templates, func(i, j int) bool { return r.templates[i].Name < r.templates[j].Name })
 	return template, nil
+}
+
+func (r *templateRepoStub) RenameTemplate(_ context.Context, id domain.TemplateID, name string, updatedAt time.Time) (domain.Template, error) {
+	r.renameCalls++
+	if r.renameErr != nil {
+		return domain.Template{}, r.renameErr
+	}
+	for i, template := range r.templates {
+		if template.ID == id {
+			template.Name, template.UpdatedAt = name, updatedAt
+			r.templates = slices.Clone(r.templates)
+			r.templates[i] = template
+			sort.Slice(r.templates, func(i, j int) bool { return r.templates[i].Name < r.templates[j].Name })
+			return template, nil
+		}
+	}
+	return domain.Template{}, domain.ErrTemplateNotFound
 }
 
 func (r *templateRepoStub) ListTemplateTopics(_ context.Context, id domain.TemplateID) ([]domain.TemplateTopic, error) {

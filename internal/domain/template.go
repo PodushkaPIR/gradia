@@ -25,13 +25,21 @@ type Template struct {
 }
 
 func NewTemplate(name string) (Template, error) {
-	name = strings.TrimSpace(name)
-	if name == "" {
-		return Template{}, ErrTemplateNameRequired
-	}
-	if utf8.RuneCountInString(name) > TemplateNameMaxLength {
-		return Template{}, ErrTemplateNameTooLong
+	name, err := NormalizeTemplateName(name)
+	if err != nil {
+		return Template{}, err
 	}
 	now := time.Now().UTC().Truncate(time.Millisecond)
 	return Template{Name: name, CreatedAt: now, UpdatedAt: now}, nil
+}
+
+func NormalizeTemplateName(name string) (string, error) {
+	name = strings.TrimSpace(name)
+	if name == "" {
+		return "", ErrTemplateNameRequired
+	}
+	if utf8.RuneCountInString(name) > TemplateNameMaxLength {
+		return "", ErrTemplateNameTooLong
+	}
+	return name, nil
 }

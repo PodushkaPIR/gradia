@@ -103,13 +103,14 @@ func newStudentsKeyMap() studentsKeyMap {
 type templatesKeyMap struct {
 	listKeyMap
 	globalKeyMap
-	Create, Open, Back shortcut
+	Create, Edit, Open, Back shortcut
 }
 
 func newTemplatesKeyMap() templatesKeyMap {
 	return templatesKeyMap{
 		listKeyMap: newListKeyMap(), globalKeyMap: newGlobalKeyMap(),
 		Create: newShortcut("n", "создать", "Создать шаблон", "n"),
+		Edit:   newShortcut("e", "редактировать", "Редактировать название шаблона", "e"),
 		Open:   newShortcut("Enter", "открыть", "Открыть темы шаблона", "enter"),
 		Back:   newShortcut("Esc", "назад", "Вернуться к ученикам", "esc"),
 	}

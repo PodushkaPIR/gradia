@@ -11,12 +11,13 @@ import (
 )
 
 type templateRepositoryStub struct {
-	calls      int
-	err        error
-	topicCalls int
-	listedID   domain.TemplateID
-	topics     []domain.TemplateTopic
-	renamed    []domain.TemplateTopic
+	calls            int
+	err              error
+	topicCalls       int
+	listedID         domain.TemplateID
+	topics           []domain.TemplateTopic
+	renamed          []domain.TemplateTopic
+	renamedTemplates []domain.Template
 }
 
 func (r *templateRepositoryStub) ListTemplates(context.Context) ([]domain.Template, error) {
@@ -26,6 +27,12 @@ func (r *templateRepositoryStub) ListTemplates(context.Context) ([]domain.Templa
 func (r *templateRepositoryStub) CreateTemplate(_ context.Context, template domain.Template) (domain.Template, error) {
 	r.calls++
 	template.ID = 1
+	return template, r.err
+}
+
+func (r *templateRepositoryStub) RenameTemplate(_ context.Context, id domain.TemplateID, name string, updatedAt time.Time) (domain.Template, error) {
+	template := domain.Template{ID: id, Name: name, UpdatedAt: updatedAt}
+	r.renamedTemplates = append(r.renamedTemplates, template)
 	return template, r.err
 }
 

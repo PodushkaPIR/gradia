@@ -73,7 +73,7 @@ func TestRoutingDropsAllRepliesForClosedTopics(t *testing.T) {
 func TestOperationCommandsAddressSuccessAndFailure(t *testing.T) {
 	ctx := context.Background()
 	for _, failed := range []bool{false, true} {
-		for _, operation := range []string{"load students", "create student", "rename student", "delete student", "load templates", "create template", "load topics", "create topic", "rename topic"} {
+		for _, operation := range []string{"load students", "create student", "rename student", "delete student", "load templates", "create template", "rename template", "load topics", "create topic", "rename topic"} {
 			name := operation + "/success"
 			if failed {
 				name = operation + "/failure"
@@ -88,7 +88,7 @@ func TestOperationCommandsAddressSuccessAndFailure(t *testing.T) {
 				})
 				templateService := app.NewTemplateService(&templateRepoStub{
 					templates: []domain.Template{{ID: 1, Name: "Python"}}, topics: []domain.TemplateTopic{{ID: 1, TemplateID: 1, Name: "Циклы"}},
-					loadErr: err, createErr: err, topicsLoadErr: err, topicCreateErr: err, topicRenameErr: err,
+					loadErr: err, createErr: err, renameErr: err, topicsLoadErr: err, topicCreateErr: err, topicRenameErr: err,
 				})
 				var cmd tea.Cmd
 				target := studentsScreen
@@ -105,7 +105,9 @@ func TestOperationCommandsAddressSuccessAndFailure(t *testing.T) {
 				case "load templates":
 					target, cmd = templatesScreen, loadTemplatesCmd(ctx, templateService)
 				case "create template":
-					target, cmd = templatesScreen, createTemplateCmd(ctx, templateService, "Python")
+					target, cmd = templatesScreen, saveTemplateCmd(ctx, templateService, 0, "Python")
+				case "rename template":
+					target, cmd = templatesScreen, saveTemplateCmd(ctx, templateService, 1, "Python")
 				case "load topics":
 					target, scoped = templatesScreen, true
 					model := templateTopicsModel{ctx: ctx, service: templateService, template: domain.Template{ID: 1}, screenID: 42}

@@ -21,19 +21,20 @@ type templatesLoadFailedMsg struct {
 }
 
 type templatesModel struct {
-	ctx       context.Context
-	service   *app.TemplateService
-	templates []domain.Template
-	cursor    int
-	selectID  domain.TemplateID
-	loading   bool
-	err       error
-	width     int
-	height    int
-	form      *nameForm
-	topics    *templateTopicsModel
-	topicsSeq uint64
-	keys      templatesKeyMap
+	ctx            context.Context
+	service        *app.TemplateService
+	templates      []domain.Template
+	cursor         int
+	selectID       domain.TemplateID
+	loading        bool
+	err            error
+	width          int
+	height         int
+	form           *nameForm
+	editTemplateID domain.TemplateID
+	topics         *templateTopicsModel
+	topicsSeq      uint64
+	keys           templatesKeyMap
 }
 
 func newTemplatesModel(ctx context.Context, service *app.TemplateService) templatesModel {
@@ -80,11 +81,17 @@ func (m templatesModel) Update(msg tea.Msg) (templatesModel, tea.Cmd) {
 		m.loading = false
 		m.err = msg.err
 		return m, nil
-	case templateCreatedMsg:
+	case templateSavedMsg:
 		m.form = nil
+		m.editTemplateID = 0
 		m.selectID = msg.template.ID
+		if m.topics != nil && m.topics.template.ID == msg.template.ID {
+			topics := *m.topics
+			topics.template = msg.template
+			m.topics = &topics
+		}
 		return m.reload()
-	case templateCreateFailedMsg:
+	case templateSaveFailedMsg:
 		if m.form != nil {
 			message := "Не удалось сохранить шаблон. Нажмите " + m.form.keys.Save.Help().Key + " для повторной попытки."
 			if errors.Is(msg.err, domain.ErrTemplateNameRequired) || errors.Is(msg.err, domain.ErrTemplateNameTooLong) {
@@ -121,9 +128,10 @@ func (m templatesModel) Update(msg tea.Msg) (templatesModel, tea.Cmd) {
 		switch action {
 		case formCancel:
 			m.form = nil
+			m.editTemplateID = 0
 			return m, nil
 		case formSubmit:
-			return m, createTemplateCmd(m.ctx, m.service, form.name.Value())
+			return m, saveTemplateCmd(m.ctx, m.service, m.editTemplateID, form.name.Value())
 		}
 		return m, cmd
 	}
@@ -139,8 +147,20 @@ func (m templatesModel) Update(msg tea.Msg) (templatesModel, tea.Cmd) {
 			}
 		case key.Matches(pressed, m.keys.Create.Binding):
 			if !m.loading {
-				form := newNameForm(nameFormConfig{Title: "Новый шаблон", Label: "Название", Placeholder: "Например, Python с нуля", Limit: domain.TemplateNameMaxLength, Width: m.width})
+				form := m.newTemplateForm("Новый шаблон")
 				cmd := form.Init()
+				m.editTemplateID = 0
+				m.form = &form
+				return m, cmd
+			}
+		case key.Matches(pressed, m.keys.Edit.Binding):
+			if !m.loading && m.err == nil && m.cursor >= 0 && m.cursor < len(m.templates) {
+				template := m.templates[m.cursor]
+				form := m.newTemplateForm("Редактирование шаблона")
+				form.name.SetValue(template.Name)
+				form.name.CursorEnd()
+				cmd := form.Init()
+				m.editTemplateID = template.ID
 				m.form = &form
 				return m, cmd
 			}
@@ -153,6 +173,10 @@ func (m templatesModel) Update(msg tea.Msg) (templatesModel, tea.Cmd) {
 		}
 	}
 	return m, nil
+}
+
+func (m templatesModel) newTemplateForm(title string) nameForm {
+	return newNameForm(nameFormConfig{Title: title, Label: "Название", Placeholder: "Например, Python с нуля", Limit: domain.TemplateNameMaxLength, Width: m.width})
 }
 
 func (m templatesModel) View() string {
@@ -208,7 +232,7 @@ func (m templatesModel) FullHelp() (string, []shortcut) {
 		return m.topics.FullHelp()
 	}
 	keys := m.keys
-	return "Шаблоны обучения", []shortcut{keys.helpBinding(), keys.Open, keys.Create, keys.Reload, keys.Back, keys.Help, keys.Quit}
+	return "Шаблоны обучения", []shortcut{keys.helpBinding(), keys.Open, keys.Create, keys.Edit, keys.Reload, keys.Back, keys.Help, keys.Quit}
 }
 
 func (m templatesModel) InputMode() inputMode {

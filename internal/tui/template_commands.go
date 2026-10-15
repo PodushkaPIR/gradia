@@ -9,20 +9,26 @@ import (
 	"github.com/shesh/gradia/internal/domain"
 )
 
-type templateCreatedMsg struct {
+type templateSavedMsg struct {
 	template domain.Template
 }
 
-type templateCreateFailedMsg struct {
+type templateSaveFailedMsg struct {
 	err error
 }
 
-func createTemplateCmd(ctx context.Context, service *app.TemplateService, name string) tea.Cmd {
+func saveTemplateCmd(ctx context.Context, service *app.TemplateService, id domain.TemplateID, name string) tea.Cmd {
 	return func() tea.Msg {
-		template, err := service.Create(ctx, name)
-		if err != nil {
-			return routeToTemplates(templateCreateFailedMsg{err: err})
+		var template domain.Template
+		var err error
+		if id == 0 {
+			template, err = service.Create(ctx, name)
+		} else {
+			template, err = service.Rename(ctx, id, name)
 		}
-		return routeToTemplates(templateCreatedMsg{template: template})
+		if err != nil {
+			return routeToTemplates(templateSaveFailedMsg{err: err})
+		}
+		return routeToTemplates(templateSavedMsg{template: template})
 	}
 }

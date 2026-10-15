@@ -10,6 +10,7 @@ import (
 type TemplateRepository interface {
 	ListTemplates(context.Context) ([]domain.Template, error)
 	CreateTemplate(context.Context, domain.Template) (domain.Template, error)
+	RenameTemplate(context.Context, domain.TemplateID, string, time.Time) (domain.Template, error)
 	ListTemplateTopics(context.Context, domain.TemplateID) ([]domain.TemplateTopic, error)
 	CreateTemplateTopic(context.Context, domain.TemplateTopic) (domain.TemplateTopic, error)
 	RenameTemplateTopic(context.Context, domain.TemplateID, domain.TemplateTopicID, string, time.Time) (domain.TemplateTopic, error)
@@ -33,6 +34,17 @@ func (s *TemplateService) Create(ctx context.Context, name string) (domain.Templ
 		return domain.Template{}, err
 	}
 	return s.repo.CreateTemplate(ctx, template)
+}
+
+func (s *TemplateService) Rename(ctx context.Context, id domain.TemplateID, name string) (domain.Template, error) {
+	if id <= 0 {
+		return domain.Template{}, domain.ErrTemplateNotFound
+	}
+	name, err := domain.NormalizeTemplateName(name)
+	if err != nil {
+		return domain.Template{}, err
+	}
+	return s.repo.RenameTemplate(ctx, id, name, time.Now().UTC().Truncate(time.Millisecond))
 }
 
 func (s *TemplateService) ListTopics(ctx context.Context, id domain.TemplateID) ([]domain.TemplateTopic, error) {
