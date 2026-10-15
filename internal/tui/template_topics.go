@@ -43,6 +43,7 @@ type templateTopicsModel struct {
 	template    domain.Template
 	screenID    uint64
 	topics      []domain.TemplateTopic
+	index       topicTreeIndex
 	cursor      int
 	loading     bool
 	err         error
@@ -50,7 +51,7 @@ type templateTopicsModel struct {
 	height      int
 	form        *nameForm
 	editTopicID domain.TemplateTopicID
-	path        []domain.TemplateTopic
+	path        []domain.TemplateTopicID
 	selections  map[domain.TemplateTopicID]domain.TemplateTopicID
 	keys        topicsKeyMap
 }
@@ -104,7 +105,8 @@ func (m templateTopicsModel) newTopicForm() nameForm {
 func (m templateTopicsModel) Update(msg tea.Msg) (templateTopicsModel, tea.Cmd) {
 	switch msg := msg.(type) {
 	case templateTopicsLoadedMsg:
-		m.topics, m.loading, m.err = msg.topics, false, nil
+		m = m.setTopics(msg.topics)
+		m.loading, m.err = false, nil
 		m.cursor = max(0, min(m.cursor, len(m.rows())-1))
 		return m, nil
 	case templateTopicsLoadFailedMsg:
@@ -113,24 +115,16 @@ func (m templateTopicsModel) Update(msg tea.Msg) (templateTopicsModel, tea.Cmd) 
 	case templateTopicCreatedMsg:
 		m.form = nil
 		m.editTopicID = 0
-		m.topics = append(append([]domain.TemplateTopic(nil), m.topics...), msg.topic)
+		m = m.setTopics(append(slices.Clone(m.topics), msg.topic))
 		m = m.selectTopic(msg.topic.ID)
 		return m, nil
 	case templateTopicRenamedMsg:
 		m.form = nil
 		m.editTopicID = 0
-		m.topics = slices.Clone(m.topics)
-		for i, topic := range m.topics {
-			if topic.ID == msg.topic.ID {
-				m.topics[i] = msg.topic
-				break
-			}
-		}
-		m.path = slices.Clone(m.path)
-		for i, topic := range m.path {
-			if topic.ID == msg.topic.ID {
-				m.path[i] = msg.topic
-			}
+		if i, ok := m.index.byID[msg.topic.ID]; ok {
+			topics := slices.Clone(m.topics)
+			topics[i] = msg.topic
+			m = m.setTopics(topics)
 		}
 		m = m.selectTopic(msg.topic.ID)
 		return m, nil
@@ -165,7 +159,11 @@ func (m templateTopicsModel) Update(msg tea.Msg) (templateTopicsModel, tea.Cmd) 
 				path, err := domain.TemplateTopicPath(m.topics, rows[m.cursor].topic.ID)
 				if err == nil {
 					m = m.rememberSelection()
-					m.path, m.cursor = path, 0
+					m.path = make([]domain.TemplateTopicID, len(path))
+					for i, topic := range path {
+						m.path[i] = topic.ID
+					}
+					m.cursor = 0
 					m = m.selectTopic(m.selections[m.currentParentID()])
 				}
 			}
@@ -226,8 +224,10 @@ func (m templateTopicsModel) formFailed(err error) (templateTopicsModel, tea.Cmd
 
 func (m templateTopicsModel) View() string {
 	names := []string{m.template.Name}
-	for _, topic := range m.path {
-		names = append(names, topic.Name)
+	for _, id := range m.path {
+		if topic, ok := m.topicByID(id); ok {
+			names = append(names, topic.Name)
+		}
 	}
 	title := "Темы — " + strings.Join(names, " › ") + "\n\n"
 	if m.form != nil {

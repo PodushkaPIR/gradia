@@ -2,6 +2,7 @@ package tui
 
 import (
 	"reflect"
+	"slices"
 	"strings"
 	"testing"
 
@@ -102,5 +103,68 @@ func TestTopicTreeFifthLevel(t *testing.T) {
 	model, _ = updateApp(model, keypress('n'))
 	if model.templates.topics.form == nil || model.templates.topics.editTopicID != 0 || model.templates.topics.currentParentID() != 6 {
 		t.Fatal("на четвёртом уровне создание должно быть доступно")
+	}
+}
+
+func TestBreadcrumbUsesCurrentTopicData(t *testing.T) {
+	repo := &templateRepoStub{templates: []domain.Template{{ID: 1, Name: "Python"}}, topics: nestedTopics()}
+	model := openTemplatesForTopics(t, repo)
+	model, load := updateApp(model, tea.KeyPressMsg{Code: tea.KeyEnter})
+	model, _ = updateApp(model, load())
+	topics := model.templates.topics.selectTopic(5)
+	model.templates.topics = &topics
+	model, _ = updateApp(model, tea.KeyPressMsg{Code: tea.KeyEnter})
+	wantPath := []domain.TemplateTopicID{1, 3, 5}
+	if !reflect.DeepEqual(model.templates.topics.path, wantPath) {
+		t.Fatalf("путь должен хранить ID: %v", model.templates.topics.path)
+	}
+	repo.topics = slices.Clone(repo.topics)
+	for i := range repo.topics {
+		switch repo.topics[i].ID {
+		case 1:
+			repo.topics[i].Name = "Повторения"
+		case 3:
+			repo.topics[i].Name = "Перебор"
+		}
+	}
+	model, reload := updateApp(model, keypress('r'))
+	model, _ = updateApp(model, reload())
+	if !reflect.DeepEqual(model.templates.topics.path, wantPath) || !strings.Contains(model.View().Content, "Python › Повторения › Перебор › Вложенные циклы") {
+		t.Fatal("после загрузки заголовок должен использовать актуальные названия без изменения пути")
+	}
+	selected := model.templates.topics.rows()[model.templates.topics.cursor].topic
+	if selected.ID != 6 {
+		t.Fatal("обновление названий не должно менять выбранную подтему")
+	}
+	parent, _ := model.templates.topics.topicByID(1)
+	parent.Name = "Циклические конструкции"
+	model, _ = updateApp(model, routeToTopics(model.templates.topics.screenID, templateTopicRenamedMsg{topic: parent}))
+	if !reflect.DeepEqual(model.templates.topics.path, wantPath) || !strings.Contains(model.View().Content, "Python › Циклические конструкции › Перебор › Вложенные циклы") {
+		t.Fatal("переименование должно обновлять заголовок через данные тем, не меняя путь")
+	}
+	model, _ = updateApp(model, tea.KeyPressMsg{Code: tea.KeyEscape})
+	if model.templates.topics.currentParentID() != 3 || !strings.Contains(model.View().Content, "Python › Циклические конструкции › Перебор") {
+		t.Fatal("Back должен сохранять актуальные названия предков")
+	}
+}
+
+func TestReloadDropsMissingPathSuffix(t *testing.T) {
+	repo := &templateRepoStub{templates: []domain.Template{{ID: 1, Name: "Python"}}, topics: nestedTopics()}
+	model := openTemplatesForTopics(t, repo)
+	model, load := updateApp(model, tea.KeyPressMsg{Code: tea.KeyEnter})
+	model, _ = updateApp(model, load())
+	topics := model.templates.topics.selectTopic(5)
+	model.templates.topics = &topics
+	model, _ = updateApp(model, tea.KeyPressMsg{Code: tea.KeyEnter})
+	// Моделируем загрузку дерева, где текущая ветка уже отсутствует.
+	repo.topics = slices.DeleteFunc(slices.Clone(repo.topics), func(topic domain.TemplateTopic) bool { return topic.ID >= 5 })
+	model, reload := updateApp(model, keypress('r'))
+	model, _ = updateApp(model, reload())
+	if !reflect.DeepEqual(model.templates.topics.path, []domain.TemplateTopicID{1, 3}) || model.templates.topics.cursor != 0 || strings.Contains(model.View().Content, "Вложенные циклы") {
+		t.Fatal("обновление должно возвращать к ближайшему существующему предку")
+	}
+	model, _ = updateApp(model, tea.KeyPressMsg{Code: tea.KeyEscape})
+	if model.templates.topics.currentParentID() != 1 {
+		t.Fatal("после восстановления пути должна работать навигация назад")
 	}
 }
