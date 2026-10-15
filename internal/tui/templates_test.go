@@ -110,7 +110,7 @@ func (r *templateRepoStub) RenameTemplateTopic(_ context.Context, templateID dom
 func TestTemplatesCreateAndReturn(t *testing.T) {
 	students := &studentRepoStub{students: []domain.Student{{ID: 1, Name: "Анна"}, {ID: 2, Name: "Иван"}}}
 	templates := &templateRepoStub{templates: []domain.Template{{ID: 1, Name: "Алгоритмы"}}}
-	model := NewApp(context.Background(), app.NewStudentService(students), app.NewTemplateService(templates))
+	model := NewApp(context.Background(), app.NewStudentService(students), app.NewTemplateService(templates), nil)
 	model, _ = updateApp(model, model.Init()())
 	model, _ = updateApp(model, keypress('j'))
 	model, load := updateApp(model, keypress('p'))
@@ -154,7 +154,7 @@ func TestTemplatesCreateAndReturn(t *testing.T) {
 
 func TestTemplatesErrorsAndCancel(t *testing.T) {
 	repo := &templateRepoStub{loadErr: errors.New("storage failed")}
-	model := NewApp(context.Background(), app.NewStudentService(&studentRepoStub{}), app.NewTemplateService(repo))
+	model := NewApp(context.Background(), app.NewStudentService(&studentRepoStub{}), app.NewTemplateService(repo), nil)
 	model, load := updateApp(model, keypress('p'))
 	model, _ = updateApp(model, load())
 	if !strings.Contains(model.View().Content, "Не удалось загрузить шаблоны") {
@@ -196,7 +196,7 @@ func TestTemplatesErrorsAndCancel(t *testing.T) {
 
 func TestTemplatesLateLoad(t *testing.T) {
 	repo := &templateRepoStub{}
-	model := NewApp(context.Background(), app.NewStudentService(&studentRepoStub{}), app.NewTemplateService(repo))
+	model := NewApp(context.Background(), app.NewStudentService(&studentRepoStub{}), app.NewTemplateService(repo), nil)
 	model, load := updateApp(model, keypress('p'))
 	model, _ = updateApp(model, tea.KeyPressMsg{Code: tea.KeyEscape})
 	model, duplicate := updateApp(model, keypress('p'))

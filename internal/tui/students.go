@@ -22,19 +22,23 @@ type studentsLoadFailedMsg struct {
 }
 
 type studentsModel struct {
-	ctx           context.Context
-	service       *app.StudentService
-	students      []domain.Student
-	cursor        int
-	loading       bool
-	err           error
-	height        int
-	width         int
-	selectID      domain.StudentID
-	form          *nameForm
-	editStudentID domain.StudentID
-	deleteDialog  *studentDeleteModel
-	keys          studentsKeyMap
+	ctx             context.Context
+	service         *app.StudentService
+	students        []domain.Student
+	cursor          int
+	loading         bool
+	err             error
+	height          int
+	width           int
+	selectID        domain.StudentID
+	form            *nameForm
+	editStudentID   domain.StudentID
+	deleteDialog    *studentDeleteModel
+	keys            studentsKeyMap
+	routeService    *app.RouteService
+	templateService *app.TemplateService
+	details         *studentDetailsModel
+	detailsSeq      uint64
 }
 
 func newStudentsModel(ctx context.Context, service *app.StudentService) studentsModel {
@@ -97,6 +101,13 @@ func (m studentsModel) Update(msg tea.Msg) (studentsModel, tea.Cmd) {
 			return m, cmd
 		}
 		return m, nil
+	case studentDetailsMsg:
+		if m.details == nil || msg.screenID != m.details.screenID {
+			return m, nil
+		}
+		details, cmd := m.details.Update(msg.payload)
+		m.details = &details
+		return m, cmd
 	case studentDeletedMsg:
 		m.deleteDialog = nil
 		for i, student := range m.students {
@@ -111,6 +122,15 @@ func (m studentsModel) Update(msg tea.Msg) (studentsModel, tea.Cmd) {
 	case tea.WindowSizeMsg:
 		m.height = max(1, msg.Height-8)
 		m.width = msg.Width
+	}
+	if m.details != nil {
+		if pressed, ok := msg.(tea.KeyPressMsg); ok && key.Matches(pressed, m.details.keys.Back.Binding) && m.details.atRoot() {
+			m.details = nil
+			return m, nil
+		}
+		details, cmd := m.details.Update(msg)
+		m.details = &details
+		return m, cmd
 	}
 	if m.deleteDialog != nil {
 		if pressed, ok := msg.(tea.KeyPressMsg); ok && m.InputMode().allowsCancel() && key.Matches(pressed, m.deleteDialog.keys.Cancel.Binding) {
@@ -136,6 +156,14 @@ func (m studentsModel) Update(msg tea.Msg) (studentsModel, tea.Cmd) {
 	}
 	if pressed, ok := msg.(tea.KeyPressMsg); ok {
 		switch {
+		case key.Matches(pressed, m.keys.Open.Binding):
+			if student, ok := m.selectedStudent(); ok && m.routeService != nil {
+				m.detailsSeq++
+				details := studentDetailsModel{ctx: m.ctx, routesService: m.routeService, templatesService: m.templateService, student: student, screenID: m.detailsSeq, height: max(1, m.height-4), width: m.width, keys: newStudentDetailsKeyMap()}
+				details, cmd := details.reload()
+				m.details = &details
+				return m, cmd
+			}
 		case key.Matches(pressed, m.keys.Create.Binding):
 			if !m.loading {
 				form := m.newStudentNameForm("Новый ученик")
@@ -189,6 +217,9 @@ func (m studentsModel) saveError(err error) string {
 }
 
 func (m studentsModel) View() string {
+	if m.details != nil {
+		return m.details.View()
+	}
 	if m.deleteDialog != nil {
 		return m.deleteDialog.View()
 	}
@@ -225,6 +256,9 @@ func (m studentsModel) View() string {
 }
 
 func (m studentsModel) InputMode() inputMode {
+	if m.details != nil {
+		return m.details.InputMode()
+	}
 	if m.deleteDialog != nil {
 		return m.deleteDialog.InputMode()
 	}
@@ -236,6 +270,9 @@ func (m studentsModel) InputMode() inputMode {
 }
 
 func (m studentsModel) ShortHelp() string {
+	if m.details != nil {
+		return m.details.ShortHelp()
+	}
 	switch m.InputMode() {
 	case inputBusy:
 		return ""
@@ -244,14 +281,17 @@ func (m studentsModel) ShortHelp() string {
 	case inputText:
 		return m.form.ShortHelp()
 	}
-	return shortHelp(m.keys.Create, m.keys.Templates, m.keys.Help)
+	return shortHelp(m.keys.Open, m.keys.Create, m.keys.Templates, m.keys.Help)
 }
 
 func (m studentsModel) FullHelp() (string, []shortcut) {
+	if m.details != nil {
+		return m.details.FullHelp()
+	}
 	if m.deleteDialog != nil {
 		keys := m.deleteDialog.keys
 		return "Удаление ученика", []shortcut{keys.Confirm, keys.Cancel, keys.Help}
 	}
 	keys := m.keys
-	return "Ученики", []shortcut{keys.helpBinding(), keys.Create, keys.Edit, keys.Delete, keys.Templates, keys.Reload, keys.Help, keys.Quit}
+	return "Ученики", []shortcut{keys.helpBinding(), keys.Open, keys.Create, keys.Edit, keys.Delete, keys.Templates, keys.Reload, keys.Help, keys.Quit}
 }

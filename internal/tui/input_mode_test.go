@@ -58,7 +58,7 @@ func TestScreensReportNestedInputMode(t *testing.T) {
 
 func TestInputModeTransitionsAndGlobalKeys(t *testing.T) {
 	repo := &studentRepoStub{}
-	model := NewApp(context.Background(), app.NewStudentService(repo), app.NewTemplateService(&templateRepoStub{}))
+	model := NewApp(context.Background(), app.NewStudentService(repo), app.NewTemplateService(&templateRepoStub{}), nil)
 	model, _ = updateApp(model, model.Init()())
 	model, _ = updateApp(model, keypress('n'))
 	if model.screenInputMode() != inputText {

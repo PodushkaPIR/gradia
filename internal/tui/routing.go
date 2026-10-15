@@ -22,6 +22,31 @@ type topicsMsg struct {
 	payload  tea.Msg
 }
 
+type studentDetailsMsg struct {
+	screenID uint64
+	payload  tea.Msg
+}
+type routePickerMsg struct {
+	screenID uint64
+	payload  tea.Msg
+}
+type routeViewMsg struct {
+	screenID uint64
+	payload  tea.Msg
+}
+
+func routeToStudentDetails(id uint64, msg tea.Msg) screenMsg {
+	return routeToStudents(studentDetailsMsg{screenID: id, payload: msg})
+}
+
+func routeToPicker(detailsID, pickerID uint64, msg tea.Msg) screenMsg {
+	return routeToStudentDetails(detailsID, routePickerMsg{screenID: pickerID, payload: msg})
+}
+
+func routeToRouteView(detailsID, viewID uint64, msg tea.Msg) screenMsg {
+	return routeToStudentDetails(detailsID, routeViewMsg{screenID: viewID, payload: msg})
+}
+
 func routeToStudents(msg tea.Msg) screenMsg {
 	return screenMsg{target: studentsScreen, payload: msg}
 }

@@ -23,7 +23,7 @@ func keypress(key rune) tea.KeyPressMsg {
 
 func TestCreateStudentFormFlow(t *testing.T) {
 	repo := &studentRepoStub{students: []domain.Student{{ID: 1, Name: "Анна"}}}
-	model := NewApp(context.Background(), app.NewStudentService(repo), nil)
+	model := NewApp(context.Background(), app.NewStudentService(repo), nil, nil)
 	model, _ = updateApp(model, model.Init()())
 	model, _ = updateApp(model, keypress('n'))
 	if model.students.form == nil || !model.students.form.name.Focused() {
@@ -62,7 +62,7 @@ func TestCreateStudentFormFlow(t *testing.T) {
 
 func TestStudentFormErrorsAndCancel(t *testing.T) {
 	repo := &studentRepoStub{}
-	model := NewApp(context.Background(), app.NewStudentService(repo), nil)
+	model := NewApp(context.Background(), app.NewStudentService(repo), nil, nil)
 	model, _ = updateApp(model, model.Init()())
 	model, _ = updateApp(model, keypress('n'))
 	model.students.form.name.SetValue("   ")

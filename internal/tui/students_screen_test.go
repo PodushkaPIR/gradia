@@ -61,7 +61,7 @@ func TestStudentsScreenOwnsCreateAndDelete(t *testing.T) {
 
 func TestAppUsesStudentsScreenInputState(t *testing.T) {
 	repo := &studentRepoStub{students: []domain.Student{{ID: 1, Name: "Иван"}}}
-	model := NewApp(context.Background(), app.NewStudentService(repo), app.NewTemplateService(&templateRepoStub{}))
+	model := NewApp(context.Background(), app.NewStudentService(repo), app.NewTemplateService(&templateRepoStub{}), nil)
 	model, _ = updateApp(model, model.Init()())
 	model, _ = updateApp(model, keypress('d'))
 	model, cmd := updateApp(model, keypress('p'))

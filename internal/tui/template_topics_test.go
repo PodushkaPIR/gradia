@@ -14,7 +14,7 @@ import (
 
 func openTemplatesForTopics(t *testing.T, repo *templateRepoStub) App {
 	t.Helper()
-	model := NewApp(context.Background(), app.NewStudentService(&studentRepoStub{}), app.NewTemplateService(repo))
+	model := NewApp(context.Background(), app.NewStudentService(&studentRepoStub{}), app.NewTemplateService(repo), nil)
 	model, load := updateApp(model, keypress('p'))
 	model, _ = updateApp(model, load())
 	return model

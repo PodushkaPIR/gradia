@@ -88,7 +88,7 @@ func newListKeyMap() listKeyMap {
 type studentsKeyMap struct {
 	listKeyMap
 	globalKeyMap
-	Create, Edit, Delete shortcut
+	Create, Edit, Delete, Open shortcut
 }
 
 func newStudentsKeyMap() studentsKeyMap {
@@ -97,7 +97,54 @@ func newStudentsKeyMap() studentsKeyMap {
 		Create: newShortcut("n", "создать", "Создать ученика", "n"),
 		Edit:   newShortcut("e", "редактировать", "Редактировать имя", "e"),
 		Delete: newShortcut("d", "удалить", "Удалить с подтверждением", "d"),
+		Open:   newShortcut("Enter", "открыть", "Открыть карточку ученика", "enter"),
 	}
+}
+
+type studentDetailsKeyMap struct {
+	listKeyMap
+	globalKeyMap
+	Create, Open, Back shortcut
+}
+
+func newStudentDetailsKeyMap() studentDetailsKeyMap {
+	return studentDetailsKeyMap{listKeyMap: newListKeyMap(), globalKeyMap: newGlobalKeyMap(),
+		Create: newShortcut("n", "создать маршрут", "Создать маршрут из шаблона", "n"),
+		Open:   newShortcut("Enter", "открыть", "Открыть маршрут", "enter"),
+		Back:   newShortcut("Esc", "назад", "Вернуться к ученикам", "esc")}
+}
+
+type routePickerKeyMap struct {
+	listKeyMap
+	globalKeyMap
+	Select, Cancel shortcut
+}
+
+func newRoutePickerKeyMap() routePickerKeyMap {
+	return routePickerKeyMap{listKeyMap: newListKeyMap(), globalKeyMap: newGlobalKeyMap(),
+		Select: newShortcut("Enter", "выбрать", "Создать маршрут по выбранному шаблону", "enter"),
+		Cancel: newShortcut("Esc", "отменить", "Отменить выбор шаблона", "esc")}
+}
+
+type routeViewKeyMap struct {
+	listKeyMap
+	globalKeyMap
+	Back                       shortcut
+	NextStatus, PreviousStatus shortcut
+	EditNote                   shortcut
+}
+
+func newRouteViewKeyMap() routeViewKeyMap {
+	return routeViewKeyMap{listKeyMap: newListKeyMap(), globalKeyMap: newGlobalKeyMap(), Back: newShortcut("Esc", "назад", "Вернуться к карточке ученика", "esc"),
+		NextStatus:     newShortcut("Space", "статус", "Следующий статус конечной темы", "space"),
+		PreviousStatus: newShortcut("Backspace", "назад", "Предыдущий статус конечной темы", "backspace"),
+		EditNote:       newShortcut("e", "заметка", "Редактировать Markdown-заметку темы", "e")}
+}
+
+type noteFormKeyMap struct{ Save, Cancel shortcut }
+
+func newNoteFormKeyMap() noteFormKeyMap {
+	return noteFormKeyMap{Save: newShortcut("Ctrl+S", "сохранить", "Сохранить заметку", "ctrl+s"), Cancel: newShortcut("Esc", "отменить", "Отменить редактирование", "esc")}
 }
 
 type templatesKeyMap struct {

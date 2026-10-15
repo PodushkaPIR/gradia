@@ -64,6 +64,9 @@ func (m studentDeleteModel) View() string {
 	if errors.Is(m.err, domain.ErrStudentNotFound) {
 		return text + "\n\nУченик больше не существует. Нажмите " + m.keys.Cancel.Help().Key + " и обновите список по " + newListKeyMap().Reload.Help().Key + "."
 	}
+	if errors.Is(m.err, domain.ErrStudentInUse) {
+		return text + "\n\n" + m.err.Error()
+	}
 	if m.err != nil {
 		return text + "\n\nНе удалось удалить ученика. Нажмите " + m.keys.Confirm.Help().Key + " для повторной попытки."
 	}

@@ -13,7 +13,7 @@ import (
 
 func TestHelpCapturesKeysAndPreservesScreen(t *testing.T) {
 	repo := &studentRepoStub{students: []domain.Student{{ID: 1, Name: "Анна"}, {ID: 2, Name: "Иван"}}}
-	model := NewApp(context.Background(), app.NewStudentService(repo), app.NewTemplateService(&templateRepoStub{}))
+	model := NewApp(context.Background(), app.NewStudentService(repo), app.NewTemplateService(&templateRepoStub{}), nil)
 	model, _ = updateApp(model, model.Init()())
 	model, _ = updateApp(model, keypress('j'))
 	model, _ = updateApp(model, keypress('?'))
@@ -50,7 +50,7 @@ func TestHelpCapturesKeysAndPreservesScreen(t *testing.T) {
 }
 
 func TestQuestionMarkIsTextInForms(t *testing.T) {
-	model := NewApp(context.Background(), app.NewStudentService(&studentRepoStub{}), app.NewTemplateService(&templateRepoStub{}))
+	model := NewApp(context.Background(), app.NewStudentService(&studentRepoStub{}), app.NewTemplateService(&templateRepoStub{}), nil)
 	model, _ = updateApp(model, model.Init()())
 	model, _ = updateApp(model, keypress('n'))
 	model, _ = updateApp(model, keypress('?'))
@@ -68,7 +68,7 @@ func TestQuestionMarkIsTextInForms(t *testing.T) {
 }
 
 func TestHelpScrollAndQuit(t *testing.T) {
-	model := NewApp(context.Background(), app.NewStudentService(&studentRepoStub{}), nil)
+	model := NewApp(context.Background(), app.NewStudentService(&studentRepoStub{}), nil, nil)
 	model, _ = updateApp(model, tea.WindowSizeMsg{Width: 80, Height: 8})
 	model, _ = updateApp(model, keypress('?'))
 	model, _ = updateApp(model, tea.KeyPressMsg{Code: tea.KeyPgDown})

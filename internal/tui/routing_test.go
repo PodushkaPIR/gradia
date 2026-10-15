@@ -14,7 +14,7 @@ import (
 func TestRoutingDeliversToInactiveScreenAndThroughHelp(t *testing.T) {
 	students := &studentRepoStub{students: []domain.Student{{ID: 1, Name: "Иван"}}}
 	templates := &templateRepoStub{templates: []domain.Template{{ID: 1, Name: "Python"}}}
-	model := NewApp(context.Background(), app.NewStudentService(students), app.NewTemplateService(templates))
+	model := NewApp(context.Background(), app.NewStudentService(students), app.NewTemplateService(templates), nil)
 	studentLoad := model.Init()
 	model, templateLoad := updateApp(model, keypress('p'))
 	model, _ = updateApp(model, studentLoad())

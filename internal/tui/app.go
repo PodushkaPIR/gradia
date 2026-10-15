@@ -19,8 +19,10 @@ type App struct {
 	keys          globalKeyMap
 }
 
-func NewApp(ctx context.Context, students *app.StudentService, templates *app.TemplateService) App {
-	return App{students: newStudentsModel(ctx, students), templates: newTemplatesModel(ctx, templates), width: 80, height: 24, keys: newGlobalKeyMap()}
+func NewApp(ctx context.Context, students *app.StudentService, templates *app.TemplateService, routes *app.RouteService) App {
+	screen := newStudentsModel(ctx, students)
+	screen.routeService, screen.templateService = routes, templates
+	return App{students: screen, templates: newTemplatesModel(ctx, templates), width: 80, height: 24, keys: newGlobalKeyMap()}
 }
 
 func (a App) Init() tea.Cmd {

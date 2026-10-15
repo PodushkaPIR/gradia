@@ -75,7 +75,7 @@ func (r *studentRepoStub) DeleteStudent(_ context.Context, id domain.StudentID) 
 
 func TestStudentsLoadAndRetry(t *testing.T) {
 	repo := &studentRepoStub{err: errors.New("database unavailable")}
-	model := NewApp(context.Background(), app.NewStudentService(repo), nil)
+	model := NewApp(context.Background(), app.NewStudentService(repo), nil, nil)
 	cmd := model.Init()
 	if repo.calls != 0 || !strings.Contains(model.View().Content, "Загрузка") {
 		t.Fatal("Init должен вернуть команду без синхронного обращения к репозиторию")

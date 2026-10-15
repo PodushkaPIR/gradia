@@ -40,6 +40,7 @@ func run() error {
 
 	students := app.NewStudentService(store)
 	templates := app.NewTemplateService(store)
-	_, err = tea.NewProgram(tui.NewApp(ctx, students, templates), tea.WithContext(ctx)).Run()
+	routes := app.NewRouteService(store)
+	_, err = tea.NewProgram(tui.NewApp(ctx, students, templates, routes), tea.WithContext(ctx)).Run()
 	return err
 }

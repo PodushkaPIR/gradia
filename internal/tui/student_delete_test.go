@@ -27,7 +27,7 @@ func TestDeleteStudentFlow(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			students := []domain.Student{{ID: 1, Name: "Анна"}, {ID: 2, Name: "Иван"}, {ID: 3, Name: "Максим"}}
 			repo := &studentRepoStub{students: students[:tc.count]}
-			model := NewApp(context.Background(), app.NewStudentService(repo), nil)
+			model := NewApp(context.Background(), app.NewStudentService(repo), nil, nil)
 			model, _ = updateApp(model, model.Init()())
 			model.students.cursor = tc.cursor
 			target := model.students.students[tc.cursor]
@@ -73,7 +73,7 @@ func TestDeleteStudentFlow(t *testing.T) {
 func TestDeleteStudentCancelAndErrors(t *testing.T) {
 	for _, cancel := range []tea.KeyPressMsg{keypress('n'), {Code: tea.KeyEscape}} {
 		repo := &studentRepoStub{students: []domain.Student{{ID: 1, Name: "Иван"}}}
-		model := NewApp(context.Background(), app.NewStudentService(repo), nil)
+		model := NewApp(context.Background(), app.NewStudentService(repo), nil, nil)
 		model, _ = updateApp(model, model.Init()())
 		model, _ = updateApp(model, keypress('d'))
 		model, cmd := updateApp(model, cancel)
@@ -82,7 +82,7 @@ func TestDeleteStudentCancelAndErrors(t *testing.T) {
 		}
 	}
 	repo := &studentRepoStub{students: []domain.Student{{ID: 1, Name: "Иван"}}, deleteErr: errors.New("storage failed")}
-	model := NewApp(context.Background(), app.NewStudentService(repo), nil)
+	model := NewApp(context.Background(), app.NewStudentService(repo), nil, nil)
 	model, _ = updateApp(model, model.Init()())
 	model, _ = updateApp(model, keypress('d'))
 	model, remove := updateApp(model, keypress('y'))
@@ -99,7 +99,7 @@ func TestDeleteStudentCancelAndErrors(t *testing.T) {
 }
 
 func TestDeleteStudentUnavailable(t *testing.T) {
-	model := NewApp(context.Background(), app.NewStudentService(&studentRepoStub{}), nil)
+	model := NewApp(context.Background(), app.NewStudentService(&studentRepoStub{}), nil, nil)
 	model, _ = updateApp(model, keypress('d'))
 	if model.students.deleteDialog != nil {
 		t.Fatal("нельзя открыть диалог во время загрузки")
