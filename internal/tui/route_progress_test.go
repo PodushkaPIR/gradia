@@ -24,6 +24,38 @@ func (r *progressRepoStub) ListRouteTopics(context.Context, domain.RouteID) ([]d
 	return slices.Clone(r.topics), nil
 }
 
+func (r *progressRepoStub) CreateRouteTopic(_ context.Context, topic domain.RouteTopic) (domain.RouteTopic, error) {
+	if r.writeErr != nil {
+		return domain.RouteTopic{}, r.writeErr
+	}
+	var position, id int
+	for _, existing := range r.topics {
+		id = max(id, int(existing.ID))
+		sameParent := existing.ParentID == nil && topic.ParentID == nil
+		if existing.ParentID != nil && topic.ParentID != nil {
+			sameParent = *existing.ParentID == *topic.ParentID
+		}
+		if sameParent {
+			position = max(position, existing.Position+1)
+		}
+	}
+	topic.ID, topic.Position = domain.RouteTopicID(id+1), position
+	r.topics = append(r.topics, topic)
+	return topic, nil
+}
+
+func (r *progressRepoStub) RenameRouteTopic(_ context.Context, route domain.RouteID, id domain.RouteTopicID, name string, at time.Time) error {
+	if r.writeErr != nil {
+		return r.writeErr
+	}
+	for i := range r.topics {
+		if r.topics[i].ID == id {
+			r.topics[i].Name = name
+			return nil
+		}
+	}
+	return domain.ErrRouteTopicNotFound
+}
 func (r *progressRepoStub) SetRouteTopicStatus(_ context.Context, route domain.RouteID, id domain.RouteTopicID, status domain.ProgressStatus, at time.Time) error {
 	r.writes++
 	if r.writeErr != nil {

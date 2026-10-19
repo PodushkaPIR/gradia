@@ -38,6 +38,12 @@ func (r *routeRepoStub) ListStudentRoutes(context.Context, domain.StudentID) ([]
 func (r *routeRepoStub) ListRouteTopics(context.Context, domain.RouteID) ([]domain.RouteTopic, error) {
 	return nil, r.err
 }
+func (r *routeRepoStub) CreateRouteTopic(_ context.Context, topic domain.RouteTopic) (domain.RouteTopic, error) {
+	return topic, r.err
+}
+func (r *routeRepoStub) RenameRouteTopic(context.Context, domain.RouteID, domain.RouteTopicID, string, time.Time) error {
+	return r.err
+}
 func (r *routeRepoStub) SetRouteTopicStatus(context.Context, domain.RouteID, domain.RouteTopicID, domain.ProgressStatus, time.Time) error {
 	return r.err
 }

@@ -7,6 +7,9 @@ import (
 	"sort"
 	"time"
 
+	driver "modernc.org/sqlite"
+	sqlite3 "modernc.org/sqlite/lib"
+
 	"github.com/shesh/gradia/internal/domain"
 )
 
@@ -63,6 +66,50 @@ func (s *Store) ListRouteTopics(ctx context.Context, id domain.RouteID) ([]domai
 		topics = append(topics, topic)
 	}
 	return topics, rows.Err()
+}
+
+func (s *Store) CreateRouteTopic(ctx context.Context, topic domain.RouteTopic) (domain.RouteTopic, error) {
+	var parent any
+	if topic.ParentID != nil {
+		parent = int64(*topic.ParentID)
+	}
+	var sqliteErr *driver.Error
+	err := s.db.QueryRowContext(ctx, `
+		INSERT INTO route_topics (route_id, parent_id, name, position, created_at, updated_at)
+		SELECT ?, ?, ?, COALESCE(MAX(position), -1) + 1, ?, ?
+		FROM route_topics WHERE route_id = ? AND parent_id IS ?
+		RETURNING id, position
+	`, topic.RouteID, parent, topic.Name, topic.CreatedAt.UnixMilli(), topic.UpdatedAt.UnixMilli(), topic.RouteID, parent).Scan(&topic.ID, &topic.Position)
+	if err != nil {
+		if errors.As(err, &sqliteErr) {
+			switch sqliteErr.Code() {
+			case sqlite3.SQLITE_CONSTRAINT_TRIGGER:
+				return domain.RouteTopic{}, domain.ErrTopicDepthExceeded
+			case sqlite3.SQLITE_CONSTRAINT_FOREIGNKEY:
+				if topic.ParentID != nil {
+					return domain.RouteTopic{}, domain.ErrRouteTopicNotFound
+				}
+				return domain.RouteTopic{}, domain.ErrRouteNotFound
+			}
+		}
+		return domain.RouteTopic{}, err
+	}
+	return topic, nil
+}
+
+func (s *Store) RenameRouteTopic(ctx context.Context, routeID domain.RouteID, topicID domain.RouteTopicID, name string, at time.Time) error {
+	result, err := s.db.ExecContext(ctx, `UPDATE route_topics SET name = ?, updated_at = ? WHERE route_id = ? AND id = ?`, name, at.UnixMilli(), routeID, topicID)
+	if err != nil {
+		return err
+	}
+	count, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if count == 0 {
+		return domain.ErrRouteTopicNotFound
+	}
+	return nil
 }
 
 func (s *Store) CreateRouteFromTemplate(ctx context.Context, student domain.StudentID, templateID domain.TemplateID, at time.Time) (domain.Route, error) {

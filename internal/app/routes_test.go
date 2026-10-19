@@ -77,6 +77,14 @@ func (r *routeRepositoryStub) ListRouteTopics(context.Context, domain.RouteID) (
 	r.calls++
 	return r.topics, r.err
 }
+func (r *routeRepositoryStub) CreateRouteTopic(_ context.Context, topic domain.RouteTopic) (domain.RouteTopic, error) {
+	r.writes++
+	return topic, r.err
+}
+func (r *routeRepositoryStub) RenameRouteTopic(context.Context, domain.RouteID, domain.RouteTopicID, string, time.Time) error {
+	r.writes++
+	return r.err
+}
 func (r *routeRepositoryStub) CreateRouteFromTemplate(_ context.Context, student domain.StudentID, template domain.TemplateID, at time.Time) (domain.Route, error) {
 	r.calls++
 	return domain.Route{StudentID: student, SourceTemplateID: &template, CreatedAt: at, UpdatedAt: at}, r.err

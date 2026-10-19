@@ -33,7 +33,10 @@ var routeRevisionHistoryMigration string
 //go:embed migrations/0009_route_topic_exclusions.sql
 var routeTopicExclusionsMigration string
 
-var schemaMigrations = []string{studentsMigration, templatesMigration, templateTopicsMigration, topicHierarchyMigration, studentRoutesMigration, routeProgressMigration, routeTopicNotesMigration, routeRevisionHistoryMigration, routeTopicExclusionsMigration}
+//go:embed migrations/0010_route_topic_depth.sql
+var routeTopicDepthMigration string
+
+var schemaMigrations = []string{studentsMigration, templatesMigration, templateTopicsMigration, topicHierarchyMigration, studentRoutesMigration, routeProgressMigration, routeTopicNotesMigration, routeRevisionHistoryMigration, routeTopicExclusionsMigration, routeTopicDepthMigration}
 
 func (s *Store) migrate(ctx context.Context) error {
 	tx, err := s.db.BeginTx(ctx, nil)

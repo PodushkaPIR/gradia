@@ -200,13 +200,16 @@ func (m studentDetailsModel) ShortHelp() string {
 		return shortHelp(m.picker.keys.Select, m.picker.keys.Cancel, m.picker.keys.Help)
 	}
 	if m.view != nil {
+		if m.view.topicForm != nil {
+			return m.view.topicForm.ShortHelp()
+		}
 		if m.view.note != nil {
 			return m.view.note.ShortHelp()
 		}
 		if m.view.InputMode() == inputBusy {
 			return ""
 		}
-		return shortHelp(m.view.keys.NextStatus, m.view.keys.ShowExcluded, m.view.keys.Back, m.view.keys.Help)
+		return shortHelp(m.view.keys.CreateTopic, m.view.keys.AddSubtopic, m.view.keys.EditTopic, m.view.keys.NextStatus, m.view.keys.ShowExcluded, m.view.keys.Back, m.view.keys.Help)
 	}
 	return shortHelp(m.keys.Open, m.keys.Create, m.keys.Back, m.keys.Help)
 }
@@ -218,7 +221,7 @@ func (m studentDetailsModel) FullHelp() (string, []shortcut) {
 	}
 	if m.view != nil {
 		keys := m.view.keys
-		return "Маршрут ученика", []shortcut{keys.helpBinding(), keys.NextStatus, keys.PreviousStatus, keys.Revision, keys.Exclude, keys.ShowExcluded, keys.EditNote, keys.Reload, keys.Back, keys.Help, keys.Quit}
+		return "Маршрут ученика", []shortcut{keys.helpBinding(), keys.CreateTopic, keys.AddSubtopic, keys.EditTopic, keys.NextStatus, keys.PreviousStatus, keys.Revision, keys.Exclude, keys.ShowExcluded, keys.EditNote, keys.Reload, keys.Back, keys.Help, keys.Quit}
 	}
 	keys := m.keys
 	return "Карточка ученика", []shortcut{keys.helpBinding(), keys.Open, keys.Create, keys.Reload, keys.Back, keys.Help, keys.Quit}

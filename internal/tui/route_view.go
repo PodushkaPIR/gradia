@@ -2,6 +2,7 @@ package tui
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"slices"
 	"sort"
@@ -28,6 +29,11 @@ type routeRevisionSavedMsg struct {
 	topicID  domain.RouteTopicID
 	revision bool
 }
+type routeTopicSavedMsg struct {
+	topic   domain.RouteTopic
+	renamed bool
+}
+type routeTopicFailedMsg struct{ err error }
 type routeNoteSavedMsg struct {
 	topicID  domain.RouteTopicID
 	markdown string
@@ -83,6 +89,9 @@ type routeViewModel struct {
 	showExcluded        bool
 	cursor, height      int
 	width               int
+	topicForm           *nameForm
+	topicEditID         domain.RouteTopicID
+	topicParentID       domain.RouteTopicID
 	note                *noteForm
 	noteTopicID         domain.RouteTopicID
 	loading             bool
@@ -126,7 +135,7 @@ func (m routeViewModel) updateTopic(id domain.RouteTopicID, apply func(*domain.R
 }
 
 func (m routeViewModel) reload() (routeViewModel, tea.Cmd) {
-	if m.loading || m.saving || m.note != nil {
+	if m.loading || m.saving || m.topicForm != nil || m.note != nil {
 		return m, nil
 	}
 	m.loading, m.err = true, nil
@@ -166,6 +175,40 @@ func (m routeViewModel) Update(msg tea.Msg) (routeViewModel, tea.Cmd) {
 	case routeExclusionSavedMsg:
 		m.saving, m.saveErr = false, nil
 		return m.updateTopic(msg.topicID, func(topic *domain.RouteTopic) { topic.Excluded = msg.excluded }), nil
+	case routeTopicSavedMsg:
+		m.saving, m.saveErr = false, nil
+		m.topicForm, m.topicEditID, m.topicParentID = nil, 0, 0
+		found := false
+		m.topics = slices.Clone(m.topics)
+		for i := range m.topics {
+			if m.topics[i].ID == msg.topic.ID {
+				if msg.renamed {
+					m.topics[i].Name = msg.topic.Name
+				} else {
+					m.topics[i] = msg.topic
+				}
+				found = true
+				break
+			}
+		}
+		if !found {
+			m.topics = append(m.topics, msg.topic)
+		}
+		m = m.rebuildRows()
+		for i, row := range m.rows {
+			if row.topic.ID == msg.topic.ID {
+				m.cursor = i
+				break
+			}
+		}
+		return m, nil
+	case routeTopicFailedMsg:
+		if m.topicForm != nil {
+			form, cmd := m.topicForm.fail(msg.err, m.topicFormError(msg.err))
+			m.topicForm = &form
+			return m, cmd
+		}
+		return m, nil
 	case routeNoteSavedMsg:
 		m.note, m.noteTopicID = nil, 0
 		return m.updateTopic(msg.topicID, func(topic *domain.RouteTopic) { topic.Notes = msg.markdown }), nil
@@ -179,6 +222,31 @@ func (m routeViewModel) Update(msg tea.Msg) (routeViewModel, tea.Cmd) {
 	case tea.WindowSizeMsg:
 		m.height = max(1, msg.Height-10)
 		m.width = msg.Width
+	}
+	if m.topicForm != nil {
+		form, action, cmd := m.topicForm.Update(msg)
+		m.topicForm = &form
+		switch action {
+		case formCancel:
+			m.topicForm, m.topicEditID, m.topicParentID = nil, 0, 0
+			return m, nil
+		case formSubmit:
+			ctx, svc, route, editID, parentID, name, details, view := m.ctx, m.service, m.route.ID, m.topicEditID, m.topicParentID, form.name.Value(), m.detailsID, m.screenID
+			return m, func() tea.Msg {
+				if editID != 0 {
+					if err := svc.RenameTopic(ctx, route, editID, name); err != nil {
+						return routeToRouteView(details, view, routeTopicFailedMsg{err: err})
+					}
+					return routeToRouteView(details, view, routeTopicSavedMsg{topic: domain.RouteTopic{ID: editID, Name: name}, renamed: true})
+				}
+				topic, err := svc.AddTopic(ctx, route, parentID, name)
+				if err != nil {
+					return routeToRouteView(details, view, routeTopicFailedMsg{err: err})
+				}
+				return routeToRouteView(details, view, routeTopicSavedMsg{topic: topic})
+			}
+		}
+		return m, cmd
 	}
 	if m.note != nil {
 		note, action, cmd := m.note.Update(msg)
@@ -203,6 +271,23 @@ func (m routeViewModel) Update(msg tea.Msg) (routeViewModel, tea.Cmd) {
 	}
 	if pressed, ok := msg.(tea.KeyPressMsg); ok {
 		switch {
+		case key.Matches(pressed, m.keys.CreateTopic.Binding):
+			if !m.loading && m.err == nil {
+				parentID := domain.RouteTopicID(0)
+				if m.cursor >= 0 && m.cursor < len(m.rows) && m.rows[m.cursor].topic.ParentID != nil {
+					parentID = *m.rows[m.cursor].topic.ParentID
+				}
+				return m.openTopicForm("Новая тема", "Название", "Например, Циклы", parentID, 0, "")
+			}
+		case key.Matches(pressed, m.keys.AddSubtopic.Binding):
+			if !m.loading && m.err == nil && m.cursor >= 0 && m.cursor < len(m.rows) {
+				return m.openTopicForm("Новая подтема", "Название", "Например, Цикл for", m.rows[m.cursor].topic.ID, 0, "")
+			}
+		case key.Matches(pressed, m.keys.EditTopic.Binding):
+			if !m.loading && m.err == nil && m.cursor >= 0 && m.cursor < len(m.rows) {
+				topic := m.rows[m.cursor].topic
+				return m.openTopicForm("Переименование темы", "Название", "Название темы", 0, topic.ID, topic.Name)
+			}
 		case key.Matches(pressed, m.keys.Exclude.Binding):
 			return m.changeExclusion()
 		case key.Matches(pressed, m.keys.ShowExcluded.Binding):
@@ -258,6 +343,9 @@ func (m routeViewModel) changeStatus(forward bool) (routeViewModel, tea.Cmd) {
 }
 
 func (m routeViewModel) InputMode() inputMode {
+	if m.topicForm != nil {
+		return m.topicForm.InputMode()
+	}
 	if m.note != nil {
 		return m.note.InputMode()
 	}
@@ -265,6 +353,24 @@ func (m routeViewModel) InputMode() inputMode {
 		return inputBusy
 	}
 	return inputNavigation
+}
+
+func (m routeViewModel) openTopicForm(title, label, placeholder string, parentID, editID domain.RouteTopicID, value string) (routeViewModel, tea.Cmd) {
+	form := newNameForm(nameFormConfig{Title: title, Label: label, Placeholder: placeholder, Limit: domain.TopicNameMaxLength, Width: m.width})
+	if value != "" {
+		form.name.SetValue(value)
+		form.name.CursorEnd()
+	}
+	cmd := form.Init()
+	m.topicForm, m.topicEditID, m.topicParentID = &form, editID, parentID
+	return m, cmd
+}
+
+func (m routeViewModel) topicFormError(err error) string {
+	if errors.Is(err, domain.ErrTopicNameRequired) || errors.Is(err, domain.ErrTopicNameTooLong) || errors.Is(err, domain.ErrTopicDepthExceeded) || errors.Is(err, domain.ErrRouteTopicNotFound) || errors.Is(err, domain.ErrRouteNotFound) {
+		return err.Error()
+	}
+	return "Не удалось сохранить тему. Нажмите " + m.topicForm.keys.Save.Help().Key + " для повторной попытки."
 }
 
 func (m routeViewModel) changeRevision() (routeViewModel, tea.Cmd) {
@@ -327,6 +433,9 @@ func (m routeViewModel) View() string {
 	title := "Маршрут — " + m.route.Name + "\n\n"
 	if m.note != nil {
 		return title + m.note.View()
+	}
+	if m.topicForm != nil {
+		return title + m.topicForm.View()
 	}
 	if m.loading {
 		return title + "Загрузка…"

@@ -11,6 +11,8 @@ type RouteRepository interface {
 	ListStudentRoutes(context.Context, domain.StudentID) ([]domain.Route, error)
 	CreateRouteFromTemplate(context.Context, domain.StudentID, domain.TemplateID, time.Time) (domain.Route, error)
 	ListRouteTopics(context.Context, domain.RouteID) ([]domain.RouteTopic, error)
+	CreateRouteTopic(context.Context, domain.RouteTopic) (domain.RouteTopic, error)
+	RenameRouteTopic(context.Context, domain.RouteID, domain.RouteTopicID, string, time.Time) error
 	SetRouteTopicStatus(context.Context, domain.RouteID, domain.RouteTopicID, domain.ProgressStatus, time.Time) error
 	SetRouteTopicNote(context.Context, domain.RouteID, domain.RouteTopicID, string, time.Time) error
 	SetRouteTopicRevision(context.Context, domain.RouteID, domain.RouteTopicID, bool, time.Time) error
@@ -45,6 +47,48 @@ func (s *RouteService) Topics(ctx context.Context, id domain.RouteID) ([]domain.
 		return nil, domain.ErrRouteNotFound
 	}
 	return s.repo.ListRouteTopics(ctx, id)
+}
+
+func (s *RouteService) AddTopic(ctx context.Context, routeID domain.RouteID, parentID domain.RouteTopicID, name string) (domain.RouteTopic, error) {
+	if routeID <= 0 {
+		return domain.RouteTopic{}, domain.ErrRouteNotFound
+	}
+	if parentID < 0 {
+		return domain.RouteTopic{}, domain.ErrRouteTopicNotFound
+	}
+	topic, err := domain.NewRouteTopic(routeID, name)
+	if err != nil {
+		return domain.RouteTopic{}, err
+	}
+	if parentID > 0 {
+		topics, err := s.repo.ListRouteTopics(ctx, routeID)
+		if err != nil {
+			return domain.RouteTopic{}, err
+		}
+		path, err := domain.RouteTopicPath(topics, parentID)
+		if err != nil {
+			return domain.RouteTopic{}, err
+		}
+		if len(path) >= domain.TopicMaxDepth {
+			return domain.RouteTopic{}, domain.ErrTopicDepthExceeded
+		}
+		topic.ParentID = &parentID
+	}
+	return s.repo.CreateRouteTopic(ctx, topic)
+}
+
+func (s *RouteService) RenameTopic(ctx context.Context, routeID domain.RouteID, topicID domain.RouteTopicID, name string) error {
+	if routeID <= 0 {
+		return domain.ErrRouteNotFound
+	}
+	if topicID <= 0 {
+		return domain.ErrRouteTopicNotFound
+	}
+	name, err := domain.NormalizeTopicName(name)
+	if err != nil {
+		return err
+	}
+	return s.repo.RenameRouteTopic(ctx, routeID, topicID, name, time.Now().UTC().Truncate(time.Millisecond))
 }
 
 func (s *RouteService) SetStatus(ctx context.Context, routeID domain.RouteID, topicID domain.RouteTopicID, status domain.ProgressStatus) error {
