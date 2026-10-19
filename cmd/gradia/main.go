@@ -5,11 +5,13 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"path/filepath"
 
 	tea "charm.land/bubbletea/v2"
 
 	"github.com/shesh/gradia/internal/app"
 	"github.com/shesh/gradia/internal/paths"
+	"github.com/shesh/gradia/internal/reports"
 	"github.com/shesh/gradia/internal/storage/sqlite"
 	"github.com/shesh/gradia/internal/tui"
 )
@@ -41,6 +43,7 @@ func run() error {
 	students := app.NewStudentService(store)
 	templates := app.NewTemplateService(store)
 	routes := app.NewRouteService(store)
-	_, err = tea.NewProgram(tui.NewApp(ctx, students, templates, routes), tea.WithContext(ctx)).Run()
+	reportService := app.NewReportService(students, routes, reports.NewHTMLWriter(filepath.Join(filepath.Dir(path), "reports")), reports.OpenInBrowser)
+	_, err = tea.NewProgram(tui.NewApp(ctx, students, templates, routes).WithReports(reportService), tea.WithContext(ctx)).Run()
 	return err
 }

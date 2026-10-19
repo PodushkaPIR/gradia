@@ -85,7 +85,7 @@ func (m routePickerModel) Update(msg tea.Msg) (routePickerModel, tea.Cmd) {
 
 func (m routePickerModel) View() string {
 	if m.creating {
-		return "Создание персонального маршрута…"
+		return "Создание персонального учебного плана…"
 	}
 	if m.loading {
 		return "Выбор шаблона\n\nЗагрузка…"

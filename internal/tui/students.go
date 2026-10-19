@@ -37,6 +37,7 @@ type studentsModel struct {
 	keys            studentsKeyMap
 	routeService    *app.RouteService
 	templateService *app.TemplateService
+	reportService   *app.ReportService
 	details         *studentDetailsModel
 	detailsSeq      uint64
 }
@@ -160,6 +161,8 @@ func (m studentsModel) Update(msg tea.Msg) (studentsModel, tea.Cmd) {
 			if student, ok := m.selectedStudent(); ok && m.routeService != nil {
 				m.detailsSeq++
 				details := studentDetailsModel{ctx: m.ctx, routesService: m.routeService, templatesService: m.templateService, student: student, screenID: m.detailsSeq, height: max(1, m.height-4), width: m.width, keys: newStudentDetailsKeyMap()}
+				details.reportService = m.reportService
+				details.keys.Report.SetEnabled(m.reportService != nil)
 				details, cmd := details.reload()
 				m.details = &details
 				return m, cmd

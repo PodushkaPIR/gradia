@@ -21,6 +21,11 @@ type studentDetailsModel struct {
 	ctx                          context.Context
 	routesService                *app.RouteService
 	templatesService             *app.TemplateService
+	reportService                *app.ReportService
+	reportGenerating             bool
+	reportPlanID                 domain.RouteID
+	reportPath                   string
+	reportErr, reportOpenErr     error
 	student                      domain.Student
 	screenID, pickerSeq, viewSeq uint64
 	routes                       []domain.Route
@@ -67,6 +72,17 @@ func (m studentDetailsModel) Update(msg tea.Msg) (studentDetailsModel, tea.Cmd) 
 		return m, nil
 	case studentRoutesFailedMsg:
 		m.loading, m.err = false, msg.err
+		return m, nil
+	case learningReportGeneratedMsg:
+		m.reportGenerating, m.reportPath, m.reportOpenErr, m.reportErr = false, msg.path, nil, nil
+		return m, m.openReport(msg.path)
+	case learningReportOpenedMsg:
+		if msg.path == m.reportPath {
+			m.reportOpenErr = msg.err
+		}
+		return m, nil
+	case learningReportFailedMsg:
+		m.reportGenerating, m.reportErr = false, msg.err
 		return m, nil
 	case routeDetailsSavedMsg:
 		m.routeName, m.routeDescription, m.editRouteID = nil, nil, 0
@@ -123,6 +139,9 @@ func (m studentDetailsModel) Update(msg tea.Msg) (studentDetailsModel, tea.Cmd) 
 	case tea.WindowSizeMsg:
 		m.height = max(1, msg.Height-12)
 		m.width = msg.Width
+	}
+	if m.reportGenerating {
+		return m, nil
 	}
 	if m.routeName != nil {
 		form, action, cmd := m.routeName.Update(msg)
@@ -182,6 +201,8 @@ func (m studentDetailsModel) Update(msg tea.Msg) (studentDetailsModel, tea.Cmd) 
 	}
 	if pressed, ok := msg.(tea.KeyPressMsg); ok {
 		switch {
+		case key.Matches(pressed, m.keys.Report.Binding):
+			return m.generateReport()
 		case key.Matches(pressed, m.keys.EditName.Binding):
 			if !m.loading && m.err == nil && m.cursor >= 0 && m.cursor < len(m.routes) {
 				route := m.routes[m.cursor]
@@ -231,9 +252,12 @@ func (m studentDetailsModel) Update(msg tea.Msg) (studentDetailsModel, tea.Cmd) 
 }
 
 func (m studentDetailsModel) atRoot() bool {
-	return m.picker == nil && m.view == nil && m.routeName == nil && m.routeDescription == nil
+	return m.picker == nil && m.view == nil && m.routeName == nil && m.routeDescription == nil && !m.reportGenerating
 }
 func (m studentDetailsModel) InputMode() inputMode {
+	if m.reportGenerating {
+		return inputBusy
+	}
 	if m.routeName != nil {
 		return m.routeName.InputMode()
 	}
@@ -251,6 +275,9 @@ func (m studentDetailsModel) InputMode() inputMode {
 
 func (m studentDetailsModel) View() string {
 	title := "Ученик — " + m.student.Name + "\n\n"
+	if m.reportGenerating {
+		return title + "Создание HTML-отчёта…"
+	}
 	if m.routeName != nil {
 		return title + m.routeName.View()
 	}
@@ -271,17 +298,17 @@ func (m studentDetailsModel) View() string {
 	if m.student.Notes != "" {
 		text.WriteString("Заметки\n" + m.student.Notes + "\n\n")
 	}
-	text.WriteString("Учебные маршруты\n\n")
+	text.WriteString("Учебные планы\n\n")
 	if m.loading {
 		text.WriteString("Загрузка…")
 		return text.String()
 	}
 	if m.err != nil {
-		text.WriteString("Не удалось загрузить маршруты. Нажмите " + m.keys.Reload.Help().Key + " для повторной попытки.")
+		text.WriteString("Не удалось загрузить учебные планы. Нажмите " + m.keys.Reload.Help().Key + " для повторной попытки.")
 		return text.String()
 	}
 	if len(m.routes) == 0 {
-		text.WriteString("Маршрутов пока нет. Нажмите " + m.keys.Create.Help().Key + " для создания.")
+		text.WriteString("Учебных планов пока нет. Нажмите " + m.keys.Create.Help().Key + " для создания.")
 		return text.String()
 	}
 	start := max(0, m.cursor-m.height+1)
@@ -303,10 +330,14 @@ func (m studentDetailsModel) View() string {
 		}
 		text.WriteString("\n\nОписание плана (Markdown)\n" + strings.Join(lines, "\n"))
 	}
+	text.WriteString(m.reportNotice())
 	return text.String()
 }
 
 func (m studentDetailsModel) ShortHelp() string {
+	if m.reportGenerating {
+		return ""
+	}
 	if m.routeName != nil {
 		return m.routeName.ShortHelp()
 	}
@@ -331,7 +362,7 @@ func (m studentDetailsModel) ShortHelp() string {
 		}
 		return shortHelp(m.view.keys.CreateTopic, m.view.keys.AddSubtopic, m.view.keys.EditTopic, m.view.keys.NextStatus, m.view.keys.ShowExcluded, m.view.keys.Back, m.view.keys.Help)
 	}
-	return shortHelp(m.keys.Open, m.keys.Create, m.keys.EditName, m.keys.EditDescription, m.keys.Back, m.keys.Help)
+	return shortHelp(m.keys.Open, m.keys.Create, m.keys.EditName, m.keys.EditDescription, m.keys.Report, m.keys.Back, m.keys.Help)
 }
 
 func (m studentDetailsModel) FullHelp() (string, []shortcut) {
@@ -341,8 +372,8 @@ func (m studentDetailsModel) FullHelp() (string, []shortcut) {
 	}
 	if m.view != nil {
 		keys := m.view.keys
-		return "Маршрут ученика", []shortcut{keys.helpBinding(), keys.CreateTopic, keys.AddSubtopic, keys.EditTopic, keys.MoveTopicUp, keys.MoveTopicDown, keys.NextStatus, keys.PreviousStatus, keys.Revision, keys.Exclude, keys.ShowExcluded, keys.EditNote, keys.Reload, keys.Back, keys.Help, keys.Quit}
+		return "Учебный план", []shortcut{keys.helpBinding(), keys.CreateTopic, keys.AddSubtopic, keys.EditTopic, keys.MoveTopicUp, keys.MoveTopicDown, keys.NextStatus, keys.PreviousStatus, keys.Revision, keys.Exclude, keys.ShowExcluded, keys.EditNote, keys.Reload, keys.Back, keys.Help, keys.Quit}
 	}
 	keys := m.keys
-	return "Карточка ученика", []shortcut{keys.helpBinding(), keys.Open, keys.Create, keys.EditName, keys.EditDescription, keys.Reload, keys.Back, keys.Help, keys.Quit}
+	return "Карточка ученика", []shortcut{keys.helpBinding(), keys.Open, keys.Create, keys.EditName, keys.EditDescription, keys.Report, keys.Reload, keys.Back, keys.Help, keys.Quit}
 }

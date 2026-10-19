@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{.PlanName}} — {{.StudentName}} · Gradia</title>
+<style>
+:root { color-scheme: light; font-family: system-ui, -apple-system, sans-serif; color: #203047; background: #f1f5fa; line-height: 1.6; }
+* { box-sizing: border-box; }
+body { margin: 0; }
+main { width: min(100% - 2rem, 56rem); margin: 2rem auto; overflow-wrap: anywhere; }
+header, .summary, .topics { background: white; border: 1px solid #dbe4ef; border-radius: 1rem; padding: 1.5rem; margin-bottom: 1rem; }
+.brand { color: #375ad3; font-size: .8rem; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; }
+h1 { font-size: clamp(1.5rem, 5vw, 2.3rem); line-height: 1.2; margin: .6rem 0; }
+h2 { font-size: 1.2rem; margin: 0 0 1rem; }
+h3 { font-size: 1rem; margin: 0; overflow-wrap: anywhere; }
+.student { font-size: 1.15rem; color: #526279; margin: .5rem 0 0; }
+.description { white-space: pre-wrap; overflow-wrap: anywhere; border-top: 1px solid #e3eaf2; margin-top: 1rem; padding-top: 1rem; }
+.stats { display: flex; flex-wrap: wrap; gap: .7rem 1.5rem; }
+.meter { height: .65rem; border-radius: 1rem; background: #e7edf6; overflow: hidden; margin: 1rem 0 .3rem; }
+.meter span { display: block; height: 100%; background: #375ad3; }
+.topic { margin-inline-start: calc(var(--depth) * 1rem); padding: .9rem 0; border-top: 1px solid #e3eaf2; break-inside: avoid; }
+.topic:first-of-type { border-top: 0; }
+.branch h3 { font-weight: 750; }
+.badge { display: inline-block; font-size: .85rem; border-radius: .45rem; padding: .15rem .5rem; margin-top: .4rem; background: #f0f3f8; color: #526279; }
+.mastered { background: #e8f5ed; color: #21623a; }
+.learning, .needs_practice { background: #edf0ff; color: #334fa8; }
+.revision { background: #fff2da; color: #805a13; }
+.subsummary, footer { font-size: .85rem; color: #526279; }
+footer { text-align: center; padding: .5rem; }
+@media (max-width: 600px) {
+  main { width: calc(100% - 1rem); margin: .5rem auto; }
+  header, .summary, .topics { padding: 1rem; border-radius: .7rem; }
+  .topic { margin-inline-start: calc(var(--depth) * .6rem); }
+  .stats { gap: .4rem 1rem; }
+}
+</style>
+</head>
+<body>
+<main>
+<header>
+<div class="brand">Gradia · Учебный план</div>
+<h1>{{.PlanName}}</h1>
+<p class="student">{{.StudentName}}</p>
+{{if .Description}}<div class="description">{{.Description}}</div>{{end}}
+</header>
+<section class="summary" aria-label="Сводка прогресса">
+<h2>Освоено {{.Summary.Mastered}} из {{.Summary.Total}} тем</h2>
+<div class="stats"><span>Текущих: {{current .Summary}}</span><span>Предстоящих: {{.Summary.NotStarted}}</span></div>
+<div class="meter" role="progressbar" aria-label="Освоение плана" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{percent .Summary}}"><span style="width: {{percent .Summary}}%"></span></div>
+</section>
+<section class="topics" aria-label="Темы в порядке плана">
+<h2>Темы</h2>
+{{range .Topics}}<article class="topic{{if .HasChildren}} branch{{end}}" style="--depth: {{.Depth}}">
+<h3>{{.Name}}</h3>
+{{if .HasChildren}}<div class="subsummary">Освоено {{.Summary.Mastered}} из {{.Summary.Total}} · изучается {{.Summary.Learning}} · нужна практика {{.Summary.NeedsPractice}}</div>
+{{else}}<span class="badge {{.Status}}">{{status .Status}}</span>{{if .Revision}} <span class="badge revision">повторить</span>{{end}}{{end}}
+</article>
+{{else}}<p>В плане нет активных тем.</p>{{end}}
+</section>
+<footer>Локальный отчёт · Gradia</footer>
+</main>
+</body>
+</html>

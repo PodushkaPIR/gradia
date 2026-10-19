@@ -25,6 +25,11 @@ func NewApp(ctx context.Context, students *app.StudentService, templates *app.Te
 	return App{students: screen, templates: newTemplatesModel(ctx, templates), width: 80, height: 24, keys: newGlobalKeyMap()}
 }
 
+func (a App) WithReports(reports *app.ReportService) App {
+	a.students.reportService = reports
+	return a
+}
+
 func (a App) Init() tea.Cmd {
 	return a.students.Init()
 }

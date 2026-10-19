@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"slices"
-	"sort"
 	"strings"
 
 	"charm.land/bubbles/v2/key"
@@ -48,35 +47,11 @@ type routeTopicRow struct {
 }
 
 func routeTopicRows(topics []domain.RouteTopic) []routeTopicRow {
-	excluded := domain.RouteTopicExclusions(topics)
-	children := make(map[domain.RouteTopicID][]domain.RouteTopic)
-	for _, topic := range topics {
-		var parent domain.RouteTopicID
-		if topic.ParentID != nil {
-			parent = *topic.ParentID
-		}
-		children[parent] = append(children[parent], topic)
+	ordered := domain.RouteTopicTreeRows(topics)
+	rows := make([]routeTopicRow, 0, len(ordered))
+	for _, row := range ordered {
+		rows = append(rows, routeTopicRow{topic: row.Topic, depth: row.Depth, hasChildren: row.HasChildren, effectivelyExcluded: row.EffectivelyExcluded})
 	}
-	for _, group := range children {
-		sort.Slice(group, func(i, j int) bool {
-			if group[i].Position != group[j].Position {
-				return group[i].Position < group[j].Position
-			}
-			return group[i].ID < group[j].ID
-		})
-	}
-	var rows []routeTopicRow
-	var walk func(domain.RouteTopicID, int)
-	walk = func(parent domain.RouteTopicID, depth int) {
-		if depth >= domain.TopicMaxDepth {
-			return
-		}
-		for _, topic := range children[parent] {
-			rows = append(rows, routeTopicRow{topic: topic, depth: depth, hasChildren: len(children[topic.ID]) > 0, effectivelyExcluded: excluded[topic.ID]})
-			walk(topic.ID, depth+1)
-		}
-	}
-	walk(0, 0)
 	return rows
 }
 
@@ -488,7 +463,7 @@ func progressBar(summary domain.ProgressSummary) string {
 }
 
 func (m routeViewModel) View() string {
-	title := "Маршрут — " + m.route.Name + "\n\n"
+	title := "Учебный план — " + m.route.Name + "\n\n"
 	if m.note != nil {
 		return title + m.note.View()
 	}
@@ -502,7 +477,7 @@ func (m routeViewModel) View() string {
 		return title + "Не удалось загрузить темы. Нажмите " + m.keys.Reload.Help().Key + " для повторной попытки."
 	}
 	if len(m.topics) == 0 {
-		return title + "В этом маршруте пока нет тем."
+		return title + "В этом учебном плане пока нет тем."
 	}
 	var text strings.Builder
 	text.WriteString(title)
