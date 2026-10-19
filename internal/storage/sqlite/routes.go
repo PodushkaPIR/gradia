@@ -21,17 +21,10 @@ func (s *Store) ListStudentRoutes(ctx context.Context, id domain.StudentID) ([]d
 	defer rows.Close()
 	routes := make([]domain.Route, 0)
 	for rows.Next() {
-		var route domain.Route
-		var source sql.NullInt64
-		var created, updated int64
-		if err := rows.Scan(&route.ID, &route.StudentID, &source, &route.Name, &route.Description, &created, &updated); err != nil {
+		route, err := scanRoute(rows)
+		if err != nil {
 			return nil, err
 		}
-		if source.Valid {
-			id := domain.TemplateID(source.Int64)
-			route.SourceTemplateID = &id
-		}
-		route.CreatedAt, route.UpdatedAt = time.UnixMilli(created).UTC(), time.UnixMilli(updated).UTC()
 		routes = append(routes, route)
 	}
 	return routes, rows.Err()

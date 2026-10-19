@@ -2,13 +2,30 @@ package domain
 
 import (
 	"errors"
+	"strings"
 	"time"
+	"unicode/utf8"
 )
 
 var (
-	ErrRouteNotFound = errors.New("маршрут не найден")
-	ErrStudentInUse  = errors.New("у ученика есть связанные данные; удаление недоступно")
+	ErrRouteNotFound     = errors.New("маршрут не найден")
+	ErrStudentInUse      = errors.New("у ученика есть связанные данные; удаление недоступно")
+	ErrRouteNameRequired = errors.New("введите название учебного плана")
+	ErrRouteNameTooLong  = errors.New("название учебного плана должно содержать не больше 200 символов")
 )
+
+const RouteNameMaxLength = 200
+
+func NormalizeRouteName(name string) (string, error) {
+	name = strings.TrimSpace(name)
+	if name == "" {
+		return "", ErrRouteNameRequired
+	}
+	if utf8.RuneCountInString(name) > RouteNameMaxLength {
+		return "", ErrRouteNameTooLong
+	}
+	return name, nil
+}
 
 type RouteID int64
 type RouteTopicID int64

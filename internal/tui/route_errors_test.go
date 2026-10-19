@@ -18,6 +18,36 @@ type routeRepoStub struct {
 	calls  int
 }
 
+func (r *routeRepoStub) RenameRoute(_ context.Context, id domain.RouteID, name string, at time.Time) (domain.Route, error) {
+	if r.err != nil {
+		return domain.Route{}, r.err
+	}
+	for i := range r.routes {
+		if r.routes[i].ID == id {
+			r.routes[i].Name, r.routes[i].UpdatedAt = name, at
+			return r.routes[i], nil
+		}
+	}
+	return domain.Route{}, domain.ErrRouteNotFound
+}
+
+func (r *routeRepoStub) SetRouteDescription(_ context.Context, id domain.RouteID, markdown string, at time.Time) (domain.Route, error) {
+	if r.err != nil {
+		return domain.Route{}, r.err
+	}
+	for i := range r.routes {
+		if r.routes[i].ID == id {
+			r.routes[i].Description, r.routes[i].UpdatedAt = markdown, at
+			return r.routes[i], nil
+		}
+	}
+	return domain.Route{}, domain.ErrRouteNotFound
+}
+
+func (r *routeRepoStub) SwapRouteTopics(context.Context, domain.RouteID, domain.RouteTopicID, domain.RouteTopicID, time.Time) ([]domain.RouteTopicPosition, error) {
+	return nil, r.err
+}
+
 func (r *routeRepoStub) SetRouteTopicExcluded(context.Context, domain.RouteID, domain.RouteTopicID, bool, time.Time) error {
 	return r.err
 }
@@ -92,8 +122,4 @@ func TestRouteCreationRetryAndScopedReplies(t *testing.T) {
 	if model.students.details.view.loading {
 		t.Fatal("ответ нового просмотра не доставлен")
 	}
-}
-
-func (r *routeRepoStub) SwapRouteTopics(context.Context, domain.RouteID, domain.RouteTopicID, domain.RouteTopicID, time.Time) ([]domain.RouteTopicPosition, error) {
-	return nil, r.err
 }

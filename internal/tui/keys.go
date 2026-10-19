@@ -104,14 +104,17 @@ func newStudentsKeyMap() studentsKeyMap {
 type studentDetailsKeyMap struct {
 	listKeyMap
 	globalKeyMap
-	Create, Open, Back shortcut
+	Create, Open, Back        shortcut
+	EditName, EditDescription shortcut
 }
 
 func newStudentDetailsKeyMap() studentDetailsKeyMap {
 	return studentDetailsKeyMap{listKeyMap: newListKeyMap(), globalKeyMap: newGlobalKeyMap(),
-		Create: newShortcut("n", "создать маршрут", "Создать маршрут из шаблона", "n"),
-		Open:   newShortcut("Enter", "открыть", "Открыть маршрут", "enter"),
-		Back:   newShortcut("Esc", "назад", "Вернуться к ученикам", "esc")}
+		Create:          newShortcut("n", "создать маршрут", "Создать маршрут из шаблона", "n"),
+		Open:            newShortcut("Enter", "открыть", "Открыть маршрут", "enter"),
+		EditName:        newShortcut("t", "название плана", "Изменить название выбранного учебного плана", "t"),
+		EditDescription: newShortcut("e", "описание плана", "Редактировать Markdown-описание выбранного учебного плана", "e"),
+		Back:            newShortcut("Esc", "назад", "Вернуться к ученикам", "esc")}
 }
 
 type routePickerKeyMap struct {

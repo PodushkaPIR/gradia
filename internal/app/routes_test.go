@@ -16,6 +16,20 @@ type routeRepositoryStub struct {
 	writes int
 }
 
+func (r *routeRepositoryStub) RenameRoute(context.Context, domain.RouteID, string, time.Time) (domain.Route, error) {
+	r.writes++
+	return domain.Route{}, r.err
+}
+func (r *routeRepositoryStub) SetRouteDescription(context.Context, domain.RouteID, string, time.Time) (domain.Route, error) {
+	r.writes++
+	return domain.Route{}, r.err
+}
+
+func (r *routeRepositoryStub) SwapRouteTopics(context.Context, domain.RouteID, domain.RouteTopicID, domain.RouteTopicID, time.Time) ([]domain.RouteTopicPosition, error) {
+	r.writes++
+	return nil, r.err
+}
+
 func (r *routeRepositoryStub) SetRouteTopicExcluded(context.Context, domain.RouteID, domain.RouteTopicID, bool, time.Time) error {
 	r.writes++
 	return r.err
@@ -127,9 +141,4 @@ func TestRouteServiceValidatesIDsAndPropagatesErrors(t *testing.T) {
 	if err != nil || route.StudentID != 1 || *route.SourceTemplateID != 2 || route.CreatedAt.IsZero() {
 		t.Fatalf("route=%+v, err=%v", route, err)
 	}
-}
-
-func (r *routeRepositoryStub) SwapRouteTopics(context.Context, domain.RouteID, domain.RouteTopicID, domain.RouteTopicID, time.Time) ([]domain.RouteTopicPosition, error) {
-	r.writes++
-	return nil, r.err
 }

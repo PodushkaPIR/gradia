@@ -7,11 +7,12 @@ import (
 )
 
 type noteForm struct {
-	title  string
-	text   textarea.Model
-	saving bool
-	err    error
-	keys   noteFormKeyMap
+	title         string
+	text          textarea.Model
+	saving        bool
+	err           error
+	saveErrorText string
+	keys          noteFormKeyMap
 }
 
 func newNoteForm(topic, value string, width, height int) noteForm {
@@ -75,7 +76,11 @@ func (m noteForm) View() string {
 		return text + "\n\nСохранение…"
 	}
 	if m.err != nil {
-		text += "\n\nНе удалось сохранить заметку. Нажмите " + m.keys.Save.Help().Key + " для повторной попытки."
+		message := m.saveErrorText
+		if message == "" {
+			message = "Не удалось сохранить заметку."
+		}
+		text += "\n\n" + message + " Нажмите " + m.keys.Save.Help().Key + " для повторной попытки."
 	}
 	return text
 }

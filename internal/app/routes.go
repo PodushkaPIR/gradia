@@ -9,6 +9,8 @@ import (
 
 type RouteRepository interface {
 	ListStudentRoutes(context.Context, domain.StudentID) ([]domain.Route, error)
+	RenameRoute(context.Context, domain.RouteID, string, time.Time) (domain.Route, error)
+	SetRouteDescription(context.Context, domain.RouteID, string, time.Time) (domain.Route, error)
 	CreateRouteFromTemplate(context.Context, domain.StudentID, domain.TemplateID, time.Time) (domain.Route, error)
 	ListRouteTopics(context.Context, domain.RouteID) ([]domain.RouteTopic, error)
 	CreateRouteTopic(context.Context, domain.RouteTopic) (domain.RouteTopic, error)
@@ -31,6 +33,24 @@ func (s *RouteService) List(ctx context.Context, id domain.StudentID) ([]domain.
 		return nil, domain.ErrStudentNotFound
 	}
 	return s.repo.ListStudentRoutes(ctx, id)
+}
+
+func (s *RouteService) Rename(ctx context.Context, id domain.RouteID, name string) (domain.Route, error) {
+	if id <= 0 {
+		return domain.Route{}, domain.ErrRouteNotFound
+	}
+	name, err := domain.NormalizeRouteName(name)
+	if err != nil {
+		return domain.Route{}, err
+	}
+	return s.repo.RenameRoute(ctx, id, name, time.Now().UTC().Truncate(time.Millisecond))
+}
+
+func (s *RouteService) SetDescription(ctx context.Context, id domain.RouteID, markdown string) (domain.Route, error) {
+	if id <= 0 {
+		return domain.Route{}, domain.ErrRouteNotFound
+	}
+	return s.repo.SetRouteDescription(ctx, id, markdown, time.Now().UTC().Truncate(time.Millisecond))
 }
 
 func (s *RouteService) Create(ctx context.Context, student domain.StudentID, template domain.TemplateID) (domain.Route, error) {
@@ -90,6 +110,16 @@ func (s *RouteService) RenameTopic(ctx context.Context, routeID domain.RouteID, 
 		return err
 	}
 	return s.repo.RenameRouteTopic(ctx, routeID, topicID, name, time.Now().UTC().Truncate(time.Millisecond))
+}
+
+func (s *RouteService) SwapTopics(ctx context.Context, routeID domain.RouteID, first, second domain.RouteTopicID) ([]domain.RouteTopicPosition, error) {
+	if routeID <= 0 {
+		return nil, domain.ErrRouteNotFound
+	}
+	if first <= 0 || second <= 0 {
+		return nil, domain.ErrRouteTopicNotFound
+	}
+	return s.repo.SwapRouteTopics(ctx, routeID, first, second, time.Now().UTC().Truncate(time.Millisecond))
 }
 
 func (s *RouteService) SetStatus(ctx context.Context, routeID domain.RouteID, topicID domain.RouteTopicID, status domain.ProgressStatus) error {
@@ -169,14 +199,4 @@ func (s *RouteService) ExclusionHistory(ctx context.Context, routeID domain.Rout
 		return nil, domain.ErrRouteTopicNotFound
 	}
 	return s.repo.ListRouteTopicExclusionHistory(ctx, routeID, topicID)
-}
-
-func (s *RouteService) SwapTopics(ctx context.Context, routeID domain.RouteID, first, second domain.RouteTopicID) ([]domain.RouteTopicPosition, error) {
-	if routeID <= 0 {
-		return nil, domain.ErrRouteNotFound
-	}
-	if first <= 0 || second <= 0 {
-		return nil, domain.ErrRouteTopicNotFound
-	}
-	return s.repo.SwapRouteTopics(ctx, routeID, first, second, time.Now().UTC().Truncate(time.Millisecond))
 }
