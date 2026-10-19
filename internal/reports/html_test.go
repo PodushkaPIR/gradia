@@ -119,7 +119,7 @@ func TestLocalHTMLReportUsesSelectedPlanAndOmitsPrivateAndExcludedData(t *testin
 		t.Fatal(err)
 	}
 	html := string(content)
-	for _, want := range []string{"Иван &lt;Иванов&gt;", "Личный план", "Работа с циклами", "Освоено 1 из 5 тем", "Текущих: 2", "Предстоящих: 2", "нужна практика", "текущая", "предстоящая", "завершённая", "повторить", `name="viewport"`, "@media (max-width: 600px)"} {
+	for _, want := range []string{"Иван &lt;Иванов&gt;", "Личный план", "Работа с циклами", "Освоено 1 из 5 тем", "Текущих: 2", "Предстоящих: 2", "нужна практика", "текущая", "предстоящая", "завершённая", "повторить", `name="viewport"`, "@media (max-width: 600px)", "Печать / сохранить PDF", `onclick="window.print()"`, "Сохранить как PDF"} {
 		if !strings.Contains(html, want) {
 			t.Fatalf("missing %q in report", want)
 		}

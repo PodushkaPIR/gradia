@@ -28,16 +28,41 @@ h3 { font-size: 1rem; margin: 0; overflow-wrap: anywhere; }
 .revision { background: #fff2da; color: #805a13; }
 .subsummary, footer { font-size: .85rem; color: #526279; }
 footer { text-align: center; padding: .5rem; }
+.print-tools { margin: 0 0 1rem; }
+.print-tools button { font: inherit; font-weight: 650; color: white; background: #375ad3; border: 0; border-radius: .6rem; padding: .65rem 1rem; cursor: pointer; }
+.print-tools button:focus-visible { outline: 3px solid #203047; outline-offset: 3px; }
+.print-tools p { font-size: .85rem; color: #526279; margin: .5rem 0; }
 @media (max-width: 600px) {
   main { width: calc(100% - 1rem); margin: .5rem auto; }
   header, .summary, .topics { padding: 1rem; border-radius: .7rem; }
   .topic { margin-inline-start: calc(var(--depth) * .6rem); }
   .stats { gap: .4rem 1rem; }
 }
+@page { size: A4; margin: 14mm; }
+@media print {
+  :root { color: #111; background: white; font-size: 11pt; line-height: 1.45; }
+  main { width: 100%; margin: 0; }
+  .print-tools { display: none !important; }
+  header, .summary, .topics { padding: 4mm; margin-bottom: 4mm; border-radius: 0; border-color: #bbb; }
+  header, .summary { break-inside: avoid; }
+  h1 { font-size: 20pt; }
+  h2 { font-size: 13pt; }
+  h3 { font-size: 11pt; }
+  .topic { padding: 3mm 0; margin-inline-start: calc(var(--depth) * 4mm); break-inside: avoid; page-break-inside: avoid; }
+  .branch { break-after: avoid; page-break-after: avoid; }
+  .badge { color: #111; background: white; border: 1px solid #bbb; font-size: 9pt; }
+  .student, .subsummary, footer { color: #333; }
+  .meter { border: 1px solid #bbb; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+  p { orphans: 3; widows: 3; }
+}
 </style>
 </head>
 <body>
 <main>
+<nav class="print-tools" aria-label="Экспорт отчёта">
+<button type="button" onclick="window.print()">Печать / сохранить PDF</button>
+<p>В диалоге печати выберите «Сохранить как PDF». Для чистого отчёта отключите колонтитулы браузера. Также можно нажать Ctrl+P (⌘P на macOS).</p>
+</nav>
 <header>
 <div class="brand">Gradia · Учебный план</div>
 <h1>{{.PlanName}}</h1>
