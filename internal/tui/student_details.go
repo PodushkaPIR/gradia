@@ -23,6 +23,9 @@ type studentDetailsModel struct {
 	templatesService             *app.TemplateService
 	reportService                *app.ReportService
 	reportGenerating             bool
+	reportPDFExporting           bool
+	reportPDFPath                string
+	reportPDFErr                 error
 	reportPlanID                 domain.RouteID
 	reportPath                   string
 	reportErr, reportOpenErr     error
@@ -74,8 +77,22 @@ func (m studentDetailsModel) Update(msg tea.Msg) (studentDetailsModel, tea.Cmd) 
 		m.loading, m.err = false, msg.err
 		return m, nil
 	case learningReportGeneratedMsg:
-		m.reportGenerating, m.reportPath, m.reportOpenErr, m.reportErr = false, msg.path, nil, nil
+		m.reportPath, m.reportOpenErr, m.reportErr = msg.path, nil, nil
+		if msg.pdf {
+			m.reportPDFExporting = true
+			return m, m.exportReportPDF(msg.path)
+		}
+		m.reportGenerating = false
 		return m, m.openReport(msg.path)
+	case learningReportPDFMsg:
+		if msg.htmlPath != m.reportPath {
+			return m, nil
+		}
+		m.reportGenerating, m.reportPDFExporting, m.reportPDFErr = false, false, msg.err
+		if msg.err == nil {
+			m.reportPDFPath = msg.pdfPath
+		}
+		return m, nil
 	case learningReportOpenedMsg:
 		if msg.path == m.reportPath {
 			m.reportOpenErr = msg.err
@@ -202,7 +219,9 @@ func (m studentDetailsModel) Update(msg tea.Msg) (studentDetailsModel, tea.Cmd) 
 	if pressed, ok := msg.(tea.KeyPressMsg); ok {
 		switch {
 		case key.Matches(pressed, m.keys.Report.Binding):
-			return m.generateReport()
+			return m.generateReport(false)
+		case key.Matches(pressed, m.keys.PDFReport.Binding):
+			return m.generateReport(true)
 		case key.Matches(pressed, m.keys.EditName.Binding):
 			if !m.loading && m.err == nil && m.cursor >= 0 && m.cursor < len(m.routes) {
 				route := m.routes[m.cursor]
@@ -276,6 +295,9 @@ func (m studentDetailsModel) InputMode() inputMode {
 func (m studentDetailsModel) View() string {
 	title := "Ученик — " + m.student.Name + "\n\n"
 	if m.reportGenerating {
+		if m.reportPDFExporting {
+			return title + "Экспорт PDF…\n\nHTML-отчёт сохранён: " + m.reportPath
+		}
 		return title + "Создание HTML-отчёта…"
 	}
 	if m.routeName != nil {
@@ -362,7 +384,7 @@ func (m studentDetailsModel) ShortHelp() string {
 		}
 		return shortHelp(m.view.keys.CreateTopic, m.view.keys.AddSubtopic, m.view.keys.EditTopic, m.view.keys.NextStatus, m.view.keys.ShowExcluded, m.view.keys.Back, m.view.keys.Help)
 	}
-	return shortHelp(m.keys.Open, m.keys.Create, m.keys.EditName, m.keys.EditDescription, m.keys.Report, m.keys.Back, m.keys.Help)
+	return shortHelp(m.keys.Open, m.keys.Create, m.keys.EditName, m.keys.EditDescription, m.keys.Report, m.keys.PDFReport, m.keys.Back, m.keys.Help)
 }
 
 func (m studentDetailsModel) FullHelp() (string, []shortcut) {
@@ -375,5 +397,5 @@ func (m studentDetailsModel) FullHelp() (string, []shortcut) {
 		return "Учебный план", []shortcut{keys.helpBinding(), keys.CreateTopic, keys.AddSubtopic, keys.EditTopic, keys.MoveTopicUp, keys.MoveTopicDown, keys.NextStatus, keys.PreviousStatus, keys.Revision, keys.Exclude, keys.ShowExcluded, keys.EditNote, keys.Reload, keys.Back, keys.Help, keys.Quit}
 	}
 	keys := m.keys
-	return "Карточка ученика", []shortcut{keys.helpBinding(), keys.Open, keys.Create, keys.EditName, keys.EditDescription, keys.Report, keys.Reload, keys.Back, keys.Help, keys.Quit}
+	return "Карточка ученика", []shortcut{keys.helpBinding(), keys.Open, keys.Create, keys.EditName, keys.EditDescription, keys.Report, keys.PDFReport, keys.Reload, keys.Back, keys.Help, keys.Quit}
 }

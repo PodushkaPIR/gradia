@@ -106,7 +106,7 @@ type studentDetailsKeyMap struct {
 	globalKeyMap
 	Create, Open, Back        shortcut
 	EditName, EditDescription shortcut
-	Report                    shortcut
+	Report, PDFReport         shortcut
 }
 
 func newStudentDetailsKeyMap() studentDetailsKeyMap {
@@ -116,6 +116,7 @@ func newStudentDetailsKeyMap() studentDetailsKeyMap {
 		EditName:        newShortcut("t", "название плана", "Изменить название выбранного учебного плана", "t"),
 		EditDescription: newShortcut("e", "описание плана", "Редактировать Markdown-описание выбранного учебного плана", "e"),
 		Report:          newShortcut("h", "HTML-отчёт", "Сохранить HTML-отчёт выбранного учебного плана и открыть в браузере", "h"),
+		PDFReport:       newShortcut("f", "PDF-отчёт", "Экспортировать выбранный учебный план в PDF через локальный Chromium/Chrome", "f"),
 		Back:            newShortcut("Esc", "назад", "Вернуться к ученикам", "esc")}
 }
 

@@ -17,6 +17,22 @@ type reportWriterStub struct {
 	report app.LearningReport
 }
 
+type pdfExporterStub struct {
+	exports int
+	err     error
+}
+
+func (e *pdfExporterStub) Export(_ context.Context, htmlPath string) (string, error) {
+	e.exports++
+	if htmlPath != "/tmp/learning-report.html" {
+		return "", errors.New("wrong source HTML")
+	}
+	if e.err != nil {
+		return "", e.err
+	}
+	return "/tmp/learning-report.pdf", nil
+}
+
 func (w *reportWriterStub) Write(_ context.Context, report app.LearningReport) (string, error) {
 	w.writes++
 	w.report = report
@@ -89,5 +105,53 @@ func TestTutorGeneratesReportThroughCommandAndKeepsFilePathWhenBrowserFails(t *t
 	model, _ = updateApp(model, keypress('j'))
 	if strings.Contains(model.View().Content, "/tmp/learning-report.html") {
 		t.Fatal("report for previous plan shown as the selected plan's report")
+	}
+}
+
+func TestTutorExportsPDFThroughUtilityAndCanRecoverWhenUtilityFails(t *testing.T) {
+	ctx := context.Background()
+	repo := &routeRepoStub{routes: []domain.Route{{ID: 10, StudentID: 1, Name: "Выбранный план"}}}
+	students := app.NewStudentService(&studentRepoStub{students: []domain.Student{{ID: 1, Name: "Иван"}}})
+	routes := app.NewRouteService(repo)
+	writer := &reportWriterStub{}
+	pdf := &pdfExporterStub{err: errors.New("Chromium/Chrome не найден")}
+	opens := 0
+	service := app.NewReportService(students, routes, writer, func(context.Context, string) error { opens++; return nil }).WithPDFExporter(pdf)
+	model := NewApp(ctx, students, nil, routes).WithReports(service)
+	model, _ = updateApp(model, model.Init()())
+	model, cmd := updateApp(model, tea.KeyPressMsg{Code: tea.KeyEnter})
+	model, _ = updateApp(model, cmd())
+	model, cmd = updateApp(model, keypress('f'))
+	if cmd == nil || model.screenInputMode() != inputBusy || writer.writes != 0 || pdf.exports != 0 {
+		t.Fatal("PDF work must start through Cmd")
+	}
+	model, convert := updateApp(model, cmd())
+	if convert == nil || pdf.exports != 0 || !strings.Contains(model.View().Content, "/tmp/learning-report.html") {
+		t.Fatal("HTML must be saved before invoking utility")
+	}
+	model, duplicate := updateApp(model, keypress('f'))
+	if duplicate != nil {
+		t.Fatal("duplicate PDF conversion")
+	}
+	model, _ = updateApp(model, tea.KeyPressMsg{Code: tea.KeyEscape})
+	if model.students.details == nil {
+		t.Fatal("left card during conversion")
+	}
+	model, _ = updateApp(model, convert())
+	if model.screenInputMode() != inputNavigation || !strings.Contains(model.View().Content, "Chromium/Chrome не найден") || !strings.Contains(model.View().Content, "/tmp/learning-report.html") || opens != 0 {
+		t.Fatal("utility failure lost HTML or blocked recovery")
+	}
+	pdf.err = nil
+	model, cmd = updateApp(model, keypress('f'))
+	model, convert = updateApp(model, cmd())
+	model, _ = updateApp(model, convert())
+	if !strings.Contains(model.View().Content, "PDF-отчёт сохранён: /tmp/learning-report.pdf") || strings.Contains(model.View().Content, "Не удалось") || writer.writes != 2 || pdf.exports != 2 || opens != 0 {
+		t.Fatal("retry did not export PDF independently from browser")
+	}
+	model, cmd = updateApp(model, keypress('h'))
+	model, open := updateApp(model, cmd())
+	model, _ = updateApp(model, open())
+	if opens != 1 || pdf.exports != 2 || !strings.Contains(model.View().Content, "HTML-отчёт сохранён:") {
+		t.Fatal("HTML/browser fallback no longer works")
 	}
 }

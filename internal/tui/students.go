@@ -163,6 +163,7 @@ func (m studentsModel) Update(msg tea.Msg) (studentsModel, tea.Cmd) {
 				details := studentDetailsModel{ctx: m.ctx, routesService: m.routeService, templatesService: m.templateService, student: student, screenID: m.detailsSeq, height: max(1, m.height-4), width: m.width, keys: newStudentDetailsKeyMap()}
 				details.reportService = m.reportService
 				details.keys.Report.SetEnabled(m.reportService != nil)
+				details.keys.PDFReport.SetEnabled(m.reportService != nil && m.reportService.PDFExportEnabled())
 				details, cmd := details.reload()
 				m.details = &details
 				return m, cmd

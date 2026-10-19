@@ -25,6 +25,7 @@ func main() {
 
 func run() error {
 	dbFlag := flag.String("db", "", "путь к SQLite-базе (по умолчанию — каталог данных пользователя)")
+	pdfBrowserFlag := flag.String("pdf-browser", "", "путь к Chromium/Chrome для локального экспорта PDF (по умолчанию — автоматический поиск)")
 	flag.Parse()
 	path, err := paths.DB(*dbFlag)
 	if err != nil {
@@ -43,7 +44,7 @@ func run() error {
 	students := app.NewStudentService(store)
 	templates := app.NewTemplateService(store)
 	routes := app.NewRouteService(store)
-	reportService := app.NewReportService(students, routes, reports.NewHTMLWriter(filepath.Join(filepath.Dir(path), "reports")), reports.OpenInBrowser)
+	reportService := app.NewReportService(students, routes, reports.NewHTMLWriter(filepath.Join(filepath.Dir(path), "reports")), reports.OpenInBrowser).WithPDFExporter(reports.NewChromiumPDFExporter(*pdfBrowserFlag))
 	_, err = tea.NewProgram(tui.NewApp(ctx, students, templates, routes).WithReports(reportService), tea.WithContext(ctx)).Run()
 	return err
 }

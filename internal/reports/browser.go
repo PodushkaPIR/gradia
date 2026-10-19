@@ -10,15 +10,10 @@ import (
 )
 
 func OpenInBrowser(ctx context.Context, path string) error {
-	abs, err := filepath.Abs(path)
+	uri, err := localFileURL(path)
 	if err != nil {
 		return err
 	}
-	uriPath := filepath.ToSlash(abs)
-	if !strings.HasPrefix(uriPath, "/") {
-		uriPath = "/" + uriPath
-	}
-	uri := (&url.URL{Scheme: "file", Path: uriPath}).String()
 	switch runtime.GOOS {
 	case "darwin":
 		return exec.CommandContext(ctx, "open", uri).Run()
@@ -27,4 +22,16 @@ func OpenInBrowser(ctx context.Context, path string) error {
 	default:
 		return exec.CommandContext(ctx, "xdg-open", uri).Run()
 	}
+}
+
+func localFileURL(path string) (string, error) {
+	abs, err := filepath.Abs(path)
+	if err != nil {
+		return "", err
+	}
+	uriPath := filepath.ToSlash(abs)
+	if !strings.HasPrefix(uriPath, "/") {
+		uriPath = "/" + uriPath
+	}
+	return (&url.URL{Scheme: "file", Path: uriPath}).String(), nil
 }

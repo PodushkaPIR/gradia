@@ -27,15 +27,35 @@ type ReportWriter interface {
 	Write(context.Context, LearningReport) (string, error)
 }
 
+type PDFExporter interface {
+	Export(context.Context, string) (string, error)
+}
+
 type ReportService struct {
 	students *StudentService
 	routes   *RouteService
 	writer   ReportWriter
 	open     func(context.Context, string) error
+	pdf      PDFExporter
 }
 
 func NewReportService(students *StudentService, routes *RouteService, writer ReportWriter, open func(context.Context, string) error) *ReportService {
 	return &ReportService{students: students, routes: routes, writer: writer, open: open}
+}
+
+func (s *ReportService) WithPDFExporter(exporter PDFExporter) *ReportService {
+	configured := *s
+	configured.pdf = exporter
+	return &configured
+}
+
+func (s *ReportService) PDFExportEnabled() bool { return s.pdf != nil }
+
+func (s *ReportService) ExportPDF(ctx context.Context, htmlPath string) (string, error) {
+	if s.pdf == nil {
+		return "", errors.New("PDF-экспорт не настроен; используйте печать HTML-отчёта из браузера")
+	}
+	return s.pdf.Export(ctx, htmlPath)
 }
 
 func (s *ReportService) Generate(ctx context.Context, studentID domain.StudentID, routeID domain.RouteID) (string, error) {
