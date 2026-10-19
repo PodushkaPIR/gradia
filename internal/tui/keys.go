@@ -167,20 +167,47 @@ type homeworkKeyMap struct {
 	listKeyMap
 	globalKeyMap
 	Create, Open, Rename, EditTask, Toggle, Back shortcut
+	Attachments                                  shortcut
 }
 
 func newHomeworkKeyMap() homeworkKeyMap {
 	return homeworkKeyMap{listKeyMap: newListKeyMap(), globalKeyMap: newGlobalKeyMap(),
-		Create:   newShortcut("n", "создать", "Создать домашнее задание / добавить задачу", "n"),
-		Open:     newShortcut("Enter", "открыть", "Открыть задачи домашнего задания", "enter"),
-		Rename:   newShortcut("t", "название", "Переименовать домашнее задание", "t"),
-		EditTask: newShortcut("e", "задача", "Редактировать текст, темы и сложность задачи", "e"),
-		Toggle:   newShortcut("Space", "выполнение", "Отметить / снять выполнение выбранной задачи", "space"),
-		Back:     newShortcut("Esc", "назад", "Вернуться к списку домашних заданий / карточке ученика", "esc"),
+		Create:      newShortcut("n", "создать", "Создать домашнее задание / добавить задачу", "n"),
+		Open:        newShortcut("Enter", "открыть", "Открыть задачи домашнего задания", "enter"),
+		Rename:      newShortcut("t", "название", "Переименовать домашнее задание", "t"),
+		EditTask:    newShortcut("e", "задача", "Редактировать текст, темы и сложность задачи", "e"),
+		Toggle:      newShortcut("Space", "выполнение", "Отметить / снять выполнение выбранной задачи", "space"),
+		Attachments: newShortcut("a", "вложения", "Вложения выбранной задачи", "a"),
+		Back:        newShortcut("Esc", "назад", "Вернуться к списку домашних заданий / карточке ученика", "esc"),
 	}
 }
 
 type homeworkTaskFormKeyMap struct{ Save, Cancel, Next, Previous shortcut }
+
+type attachmentsKeyMap struct {
+	listKeyMap
+	globalKeyMap
+	Create, Open, Back shortcut
+}
+
+func newAttachmentsKeyMap() attachmentsKeyMap {
+	return attachmentsKeyMap{listKeyMap: newListKeyMap(), globalKeyMap: newGlobalKeyMap(),
+		Create: newShortcut("n", "прикрепить", "Прикрепить оригинальный PDF или изображение", "n"),
+		Open:   newShortcut("Enter/o", "открыть", "Подготовить копию вложения и открыть в локальном просмотрщике", "enter", "o"),
+		Back:   newShortcut("Esc", "назад", "Вернуться к задачам домашнего задания", "esc"),
+	}
+}
+
+type attachmentFormKeyMap struct{ Save, Cancel, Next, Previous shortcut }
+
+func newAttachmentFormKeyMap() attachmentFormKeyMap {
+	return attachmentFormKeyMap{
+		Save:     newShortcut("Ctrl+S", "прикрепить", "Сохранить оригинальный файл", "ctrl+s"),
+		Cancel:   newShortcut("Esc", "отменить", "Отменить прикрепление", "esc"),
+		Next:     newShortcut("Tab", "поле", "Следующее поле", "tab"),
+		Previous: newShortcut("Shift+Tab", "назад", "Предыдущее поле", "shift+tab"),
+	}
+}
 
 func newHomeworkTaskFormKeyMap() homeworkTaskFormKeyMap {
 	return homeworkTaskFormKeyMap{

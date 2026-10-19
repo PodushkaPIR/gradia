@@ -12,6 +12,8 @@ import (
 	"runtime"
 	"strconv"
 	"time"
+
+	"github.com/shesh/gradia/internal/desktop"
 )
 
 var ErrPDFUtilityNotFound = errors.New("Chromium/Chrome не найден; укажите путь через --pdf-browser или сохраните PDF из браузера")
@@ -71,7 +73,7 @@ func (e *ChromiumPDFExporter) Export(ctx context.Context, htmlPath string) (path
 	if !info.Mode().IsRegular() {
 		return "", errors.New("HTML-отчёт не является файлом")
 	}
-	uri, err := localFileURL(abs)
+	uri, err := desktop.FileURL(abs)
 	if err != nil {
 		return "", err
 	}

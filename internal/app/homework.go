@@ -14,9 +14,16 @@ type HomeworkRepository interface {
 	ListHomeworkTasks(context.Context, domain.StudentID, domain.HomeworkID) ([]domain.HomeworkTask, error)
 	SaveHomeworkTask(context.Context, domain.StudentID, domain.HomeworkID, domain.HomeworkTaskID, domain.HomeworkTaskInput, time.Time) (domain.HomeworkTask, error)
 	SetHomeworkTaskCompleted(context.Context, domain.StudentID, domain.HomeworkID, domain.HomeworkTaskID, bool, time.Time) (domain.HomeworkTask, error)
+	ListHomeworkAttachments(context.Context, domain.StudentID, domain.HomeworkID, domain.HomeworkTaskID) ([]domain.HomeworkAttachment, error)
+	AddHomeworkAttachment(context.Context, domain.StudentID, domain.HomeworkID, domain.HomeworkAttachment, []byte) (domain.HomeworkAttachment, error)
+	GetHomeworkAttachment(context.Context, domain.StudentID, domain.HomeworkID, domain.HomeworkTaskID, domain.HomeworkAttachmentID) (domain.HomeworkAttachment, []byte, error)
 }
 
-type HomeworkService struct{ repo HomeworkRepository }
+type HomeworkService struct {
+	repo     HomeworkRepository
+	files    HomeworkAttachmentFiles
+	openFile func(context.Context, string) error
+}
 
 func NewHomeworkService(repo HomeworkRepository) *HomeworkService {
 	return &HomeworkService{repo: repo}

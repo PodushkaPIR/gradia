@@ -49,6 +49,8 @@ type homeworkModel struct {
 	taskForm                          *homeworkTaskForm
 	editTaskID                        domain.HomeworkTaskID
 	keys                              homeworkKeyMap
+	attachments                       *homeworkAttachmentsModel
+	attachmentSeq                     uint64
 }
 
 func (m homeworkModel) reload() (homeworkModel, tea.Cmd) {
@@ -102,6 +104,13 @@ func (m homeworkModel) syncSummary() homeworkModel {
 
 func (m homeworkModel) Update(msg tea.Msg) (homeworkModel, tea.Cmd) {
 	switch msg := msg.(type) {
+	case homeworkAttachmentsMsg:
+		if m.attachments == nil || m.attachments.screenID != msg.screenID {
+			return m, nil
+		}
+		child, cmd := m.attachments.Update(msg.payload)
+		m.attachments = &child
+		return m, cmd
 	case homeworkLoadedMsg:
 		if m.selected != nil || msg.seq != m.loadSeq {
 			return m, nil
@@ -172,6 +181,15 @@ func (m homeworkModel) Update(msg tea.Msg) (homeworkModel, tea.Cmd) {
 		return m, nil
 	case tea.WindowSizeMsg:
 		m.width, m.height = msg.Width, max(1, msg.Height-14)
+	}
+	if m.attachments != nil {
+		if pressed, ok := msg.(tea.KeyPressMsg); ok && key.Matches(pressed, m.attachments.keys.Back.Binding) && m.attachments.form == nil && m.attachments.InputMode() == inputNavigation {
+			m.attachments = nil
+			return m, nil
+		}
+		child, cmd := m.attachments.Update(msg)
+		m.attachments = &child
+		return m, cmd
 	}
 	if m.nameForm != nil {
 		form, action, cmd := m.nameForm.Update(msg)
@@ -245,6 +263,15 @@ func (m homeworkModel) Update(msg tea.Msg) (homeworkModel, tea.Cmd) {
 			return m, nil
 		}
 		switch {
+		case key.Matches(pressed, m.keys.Attachments.Binding):
+			if m.service.AttachmentsEnabled() && m.selected != nil && m.cursor >= 0 && m.cursor < len(m.tasks) {
+				m.attachmentSeq++
+				task := m.tasks[m.cursor]
+				child := homeworkAttachmentsModel{ctx: m.ctx, service: m.service, student: m.student, homework: m.selected.ID, task: task.ID, taskContent: task.Content, detailsID: m.detailsID, homeworkScreenID: m.screenID, screenID: m.attachmentSeq, width: m.width, height: m.height, keys: newAttachmentsKeyMap()}
+				child, cmd := child.reload()
+				m.attachments = &child
+				return m, cmd
+			}
 		case key.Matches(pressed, m.keys.Create.Binding):
 			if m.selected == nil {
 				return m.openNameForm(nil)
@@ -321,9 +348,12 @@ func (m homeworkModel) listLength() int {
 	return len(m.homeworks)
 }
 func (m homeworkModel) atRoot() bool {
-	return m.selected == nil && m.nameForm == nil && m.taskForm == nil
+	return m.selected == nil && m.nameForm == nil && m.taskForm == nil && m.attachments == nil
 }
 func (m homeworkModel) InputMode() inputMode {
+	if m.attachments != nil {
+		return m.attachments.InputMode()
+	}
 	if m.nameForm != nil {
 		return m.nameForm.InputMode()
 	}
@@ -337,7 +367,7 @@ func (m homeworkModel) InputMode() inputMode {
 }
 
 func homeworkError(err error, fallback string) string {
-	for _, known := range []error{domain.ErrHomeworkNameRequired, domain.ErrHomeworkNameTooLong, domain.ErrTaskContentRequired, domain.ErrTaskTopicsRequired, domain.ErrInvalidTaskDifficulty, domain.ErrTopicNameTooLong, domain.ErrHomeworkNotFound, domain.ErrHomeworkTaskNotFound} {
+	for _, known := range []error{domain.ErrHomeworkNameRequired, domain.ErrHomeworkNameTooLong, domain.ErrTaskContentRequired, domain.ErrTaskTopicsRequired, domain.ErrInvalidTaskDifficulty, domain.ErrTopicNameTooLong, domain.ErrHomeworkNotFound, domain.ErrHomeworkTaskNotFound, domain.ErrAttachmentType, domain.ErrAttachmentPages, domain.ErrAttachmentPagesOnlyPDF, app.ErrAttachmentFilesUnavailable, app.ErrAttachmentPathRequired, app.ErrAttachmentRegularFileRequired} {
 		if errors.Is(err, known) {
 			return err.Error()
 		}
@@ -349,6 +379,9 @@ func (m homeworkModel) View() string {
 	title := "Домашние задания\n\n"
 	if m.selected != nil {
 		title = "Домашнее задание — " + m.selected.Name + "\n\n"
+	}
+	if m.attachments != nil {
+		return title + m.attachments.View()
 	}
 	if m.nameForm != nil {
 		return title + m.nameForm.View()
@@ -425,6 +458,9 @@ func (m homeworkModel) View() string {
 }
 
 func (m homeworkModel) ShortHelp() string {
+	if m.attachments != nil {
+		return m.attachments.ShortHelp()
+	}
 	if m.nameForm != nil {
 		return m.nameForm.ShortHelp()
 	}
@@ -435,18 +471,21 @@ func (m homeworkModel) ShortHelp() string {
 		return ""
 	}
 	if m.selected != nil {
-		return shortHelp(m.keys.Create, m.keys.EditTask, m.keys.Toggle, m.keys.Back, m.keys.Help)
+		return shortHelp(m.keys.Create, m.keys.EditTask, m.keys.Toggle, m.keys.Attachments, m.keys.Back, m.keys.Help)
 	}
 	return shortHelp(m.keys.Open, m.keys.Create, m.keys.Rename, m.keys.Back, m.keys.Help)
 }
 
 func (m homeworkModel) FullHelp() (string, []shortcut) {
+	if m.attachments != nil {
+		return m.attachments.FullHelp()
+	}
 	keys := m.keys
 	bindings := []shortcut{keys.helpBinding(), keys.Create, keys.Rename}
 	if m.selected == nil {
 		bindings = append(bindings, keys.Open)
 	} else {
-		bindings = append(bindings, keys.EditTask, keys.Toggle)
+		bindings = append(bindings, keys.EditTask, keys.Toggle, keys.Attachments)
 	}
 	return "Домашние задания", append(bindings, keys.Reload, keys.Back, keys.Help, keys.Quit)
 }

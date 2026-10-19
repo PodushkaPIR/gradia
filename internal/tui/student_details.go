@@ -241,6 +241,7 @@ func (m studentDetailsModel) Update(msg tea.Msg) (studentDetailsModel, tea.Cmd) 
 			if m.homeworkService != nil {
 				m.homeworkSeq++
 				homework := homeworkModel{ctx: m.ctx, service: m.homeworkService, student: m.student.ID, detailsID: m.screenID, screenID: m.homeworkSeq, width: m.width, height: m.height, keys: newHomeworkKeyMap()}
+				homework.keys.Attachments.SetEnabled(m.homeworkService.AttachmentsEnabled())
 				homework, cmd := homework.reload()
 				m.homework = &homework
 				return m, cmd

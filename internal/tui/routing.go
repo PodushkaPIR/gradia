@@ -40,6 +40,15 @@ type homeworkMsg struct {
 	payload  tea.Msg
 }
 
+type homeworkAttachmentsMsg struct {
+	screenID uint64
+	payload  tea.Msg
+}
+
+func routeToHomeworkAttachments(detailsID, homeworkID, screenID uint64, msg tea.Msg) screenMsg {
+	return routeToHomework(detailsID, homeworkID, homeworkAttachmentsMsg{screenID: screenID, payload: msg})
+}
+
 func routeToHomework(detailsID, homeworkID uint64, msg tea.Msg) screenMsg {
 	return routeToStudentDetails(detailsID, homeworkMsg{screenID: homeworkID, payload: msg})
 }
