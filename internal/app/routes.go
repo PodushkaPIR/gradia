@@ -13,6 +13,7 @@ type RouteRepository interface {
 	ListRouteTopics(context.Context, domain.RouteID) ([]domain.RouteTopic, error)
 	CreateRouteTopic(context.Context, domain.RouteTopic) (domain.RouteTopic, error)
 	RenameRouteTopic(context.Context, domain.RouteID, domain.RouteTopicID, string, time.Time) error
+	SwapRouteTopics(context.Context, domain.RouteID, domain.RouteTopicID, domain.RouteTopicID, time.Time) ([]domain.RouteTopicPosition, error)
 	SetRouteTopicStatus(context.Context, domain.RouteID, domain.RouteTopicID, domain.ProgressStatus, time.Time) error
 	SetRouteTopicNote(context.Context, domain.RouteID, domain.RouteTopicID, string, time.Time) error
 	SetRouteTopicRevision(context.Context, domain.RouteID, domain.RouteTopicID, bool, time.Time) error
@@ -168,4 +169,14 @@ func (s *RouteService) ExclusionHistory(ctx context.Context, routeID domain.Rout
 		return nil, domain.ErrRouteTopicNotFound
 	}
 	return s.repo.ListRouteTopicExclusionHistory(ctx, routeID, topicID)
+}
+
+func (s *RouteService) SwapTopics(ctx context.Context, routeID domain.RouteID, first, second domain.RouteTopicID) ([]domain.RouteTopicPosition, error) {
+	if routeID <= 0 {
+		return nil, domain.ErrRouteNotFound
+	}
+	if first <= 0 || second <= 0 {
+		return nil, domain.ErrRouteTopicNotFound
+	}
+	return s.repo.SwapRouteTopics(ctx, routeID, first, second, time.Now().UTC().Truncate(time.Millisecond))
 }

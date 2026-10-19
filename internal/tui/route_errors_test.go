@@ -93,3 +93,7 @@ func TestRouteCreationRetryAndScopedReplies(t *testing.T) {
 		t.Fatal("ответ нового просмотра не доставлен")
 	}
 }
+
+func (r *routeRepoStub) SwapRouteTopics(context.Context, domain.RouteID, domain.RouteTopicID, domain.RouteTopicID, time.Time) ([]domain.RouteTopicPosition, error) {
+	return nil, r.err
+}

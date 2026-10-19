@@ -128,3 +128,8 @@ func TestRouteServiceValidatesIDsAndPropagatesErrors(t *testing.T) {
 		t.Fatalf("route=%+v, err=%v", route, err)
 	}
 }
+
+func (r *routeRepositoryStub) SwapRouteTopics(context.Context, domain.RouteID, domain.RouteTopicID, domain.RouteTopicID, time.Time) ([]domain.RouteTopicPosition, error) {
+	r.writes++
+	return nil, r.err
+}

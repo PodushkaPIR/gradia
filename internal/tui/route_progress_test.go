@@ -156,7 +156,7 @@ func TestProgressKeysAndErrors(t *testing.T) {
 		t.Fatal("нельзя уходить во время записи прогресса")
 	}
 	model, _ = updateApp(model, save())
-	if model.screenInputMode() != inputNavigation || !strings.Contains(model.View().Content, "Не удалось сохранить прогресс") || model.students.details.view.rows[1].topic.Status.Effective() != domain.ProgressNotStarted {
+	if model.screenInputMode() != inputNavigation || !strings.Contains(model.View().Content, "Не удалось сохранить изменения") || model.students.details.view.rows[1].topic.Status.Effective() != domain.ProgressNotStarted {
 		t.Fatal("ошибка должна сохранять прежнее состояние")
 	}
 	repo.writeErr = nil

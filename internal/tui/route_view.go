@@ -20,7 +20,7 @@ type routeProgressSavedMsg struct {
 	topicID domain.RouteTopicID
 	status  domain.ProgressStatus
 }
-type routeProgressFailedMsg struct{ err error }
+type routeChangesFailedMsg struct{ err error }
 type routeExclusionSavedMsg struct {
 	topicID  domain.RouteTopicID
 	excluded bool
@@ -34,6 +34,7 @@ type routeTopicSavedMsg struct {
 	renamed bool
 }
 type routeTopicFailedMsg struct{ err error }
+type routeTopicsReorderedMsg struct{ positions []domain.RouteTopicPosition }
 type routeNoteSavedMsg struct {
 	topicID  domain.RouteTopicID
 	markdown string
@@ -166,9 +167,20 @@ func (m routeViewModel) Update(msg tea.Msg) (routeViewModel, tea.Cmd) {
 				topic.Revision = false
 			}
 		}), nil
-	case routeProgressFailedMsg:
+	case routeChangesFailedMsg:
 		m.saving, m.saveErr = false, msg.err
 		return m, nil
+	case routeTopicsReorderedMsg:
+		m.saving, m.saveErr = false, nil
+		m.topics = slices.Clone(m.topics)
+		for i := range m.topics {
+			for _, position := range msg.positions {
+				if m.topics[i].ID == position.TopicID {
+					m.topics[i].Position = position.Position
+				}
+			}
+		}
+		return m.rebuildRows(), nil
 	case routeRevisionSavedMsg:
 		m.saving, m.saveErr = false, nil
 		return m.updateTopic(msg.topicID, func(topic *domain.RouteTopic) { topic.Revision = msg.revision }), nil
@@ -271,6 +283,10 @@ func (m routeViewModel) Update(msg tea.Msg) (routeViewModel, tea.Cmd) {
 	}
 	if pressed, ok := msg.(tea.KeyPressMsg); ok {
 		switch {
+		case key.Matches(pressed, m.keys.MoveTopicUp.Binding):
+			return m.moveTopic(false)
+		case key.Matches(pressed, m.keys.MoveTopicDown.Binding):
+			return m.moveTopic(true)
 		case key.Matches(pressed, m.keys.CreateTopic.Binding):
 			if !m.loading && m.err == nil {
 				parentID := domain.RouteTopicID(0)
@@ -336,7 +352,7 @@ func (m routeViewModel) changeStatus(forward bool) (routeViewModel, tea.Cmd) {
 	ctx, svc, route, id, details, view := m.ctx, m.service, m.route.ID, topic.ID, m.detailsID, m.screenID
 	return m, func() tea.Msg {
 		if err := svc.SetStatus(ctx, route, id, status); err != nil {
-			return routeToRouteView(details, view, routeProgressFailedMsg{err: err})
+			return routeToRouteView(details, view, routeChangesFailedMsg{err: err})
 		}
 		return routeToRouteView(details, view, routeProgressSavedMsg{topicID: id, status: status})
 	}
@@ -386,7 +402,7 @@ func (m routeViewModel) changeRevision() (routeViewModel, tea.Cmd) {
 	revision := !topic.Revision
 	return m, func() tea.Msg {
 		if err := svc.SetRevision(ctx, route, topic.ID, revision); err != nil {
-			return routeToRouteView(details, view, routeProgressFailedMsg{err: err})
+			return routeToRouteView(details, view, routeChangesFailedMsg{err: err})
 		}
 		return routeToRouteView(details, view, routeRevisionSavedMsg{topicID: topic.ID, revision: revision})
 	}
@@ -402,7 +418,7 @@ func (m routeViewModel) changeExclusion() (routeViewModel, tea.Cmd) {
 	ctx, svc, route, details, view := m.ctx, m.service, m.route.ID, m.detailsID, m.screenID
 	return m, func() tea.Msg {
 		if err := svc.SetExcluded(ctx, route, topic.ID, excluded); err != nil {
-			return routeToRouteView(details, view, routeProgressFailedMsg{err: err})
+			return routeToRouteView(details, view, routeChangesFailedMsg{err: err})
 		}
 		return routeToRouteView(details, view, routeExclusionSavedMsg{topicID: topic.ID, excluded: excluded})
 	}
@@ -521,7 +537,38 @@ func (m routeViewModel) View() string {
 		text.WriteString("\n\nСохранение…")
 	}
 	if m.saveErr != nil {
-		text.WriteString("\n\nНе удалось сохранить прогресс. Изменение не применено; повторите действие.")
+		text.WriteString("\n\nНе удалось сохранить изменения. Изменение не применено; повторите действие.")
 	}
 	return text.String()
+}
+
+func (m routeViewModel) moveTopic(forward bool) (routeViewModel, tea.Cmd) {
+	if m.loading || m.err != nil || m.cursor < 0 || m.cursor >= len(m.rows) {
+		return m, nil
+	}
+	topic := m.rows[m.cursor].topic
+	step := -1
+	if forward {
+		step = 1
+	}
+	for i := m.cursor + step; i >= 0 && i < len(m.rows); i += step {
+		other := m.rows[i].topic
+		sameParent := topic.ParentID == nil && other.ParentID == nil
+		if topic.ParentID != nil && other.ParentID != nil {
+			sameParent = *topic.ParentID == *other.ParentID
+		}
+		if !sameParent {
+			continue
+		}
+		m.saving, m.saveErr = true, nil
+		ctx, svc, route, details, view := m.ctx, m.service, m.route.ID, m.detailsID, m.screenID
+		return m, func() tea.Msg {
+			positions, err := svc.SwapTopics(ctx, route, topic.ID, other.ID)
+			if err != nil {
+				return routeToRouteView(details, view, routeChangesFailedMsg{err: err})
+			}
+			return routeToRouteView(details, view, routeTopicsReorderedMsg{positions: positions})
+		}
+	}
+	return m, nil
 }

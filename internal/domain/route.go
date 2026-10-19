@@ -13,6 +13,14 @@ var (
 type RouteID int64
 type RouteTopicID int64
 
+var ErrTopicsNotSiblings = errors.New("переставлять можно только темы одного родителя")
+
+// RouteTopicPosition is a persisted position within a topic's sibling group.
+type RouteTopicPosition struct {
+	TopicID  RouteTopicID
+	Position int
+}
+
 type Route struct {
 	ID                   RouteID
 	StudentID            StudentID

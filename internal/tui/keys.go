@@ -135,6 +135,7 @@ type routeViewKeyMap struct {
 	EditTopic, EditNote        shortcut
 	Revision                   shortcut
 	Exclude, ShowExcluded      shortcut
+	MoveTopicUp, MoveTopicDown shortcut
 }
 
 func newRouteViewKeyMap() routeViewKeyMap {
@@ -144,6 +145,8 @@ func newRouteViewKeyMap() routeViewKeyMap {
 		CreateTopic:    newShortcut("n", "новая тема", "Добавить тему на текущем уровне", "n"),
 		AddSubtopic:    newShortcut("c", "подтема", "Добавить подтему выбранной темы", "c"),
 		EditTopic:      newShortcut("t", "название", "Переименовать выбранную тему", "t"),
+		MoveTopicUp:    newShortcut("K / Alt+↑", "выше", "Переставить тему с предыдущим видимым соседом того же родителя", "K", "alt+up"),
+		MoveTopicDown:  newShortcut("J / Alt+↓", "ниже", "Переставить тему со следующим видимым соседом того же родителя", "J", "alt+down"),
 		Revision:       newShortcut("v", "повторение", "Отметить освоенную тему для повторения / завершить повторение", "v"),
 		Exclude:        newShortcut("x", "исключить/вернуть", "Исключить / восстановить тему или раздел; личные исключения потомков сохраняются", "x"),
 		ShowExcluded:   newShortcut("a", "исключённые", "Показать / скрыть исключённые темы; исключения предков также скрывают ветку", "a"),
