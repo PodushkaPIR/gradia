@@ -358,6 +358,37 @@ func (m routeViewModel) changeStatus(forward bool) (routeViewModel, tea.Cmd) {
 	}
 }
 
+func (m routeViewModel) moveTopic(forward bool) (routeViewModel, tea.Cmd) {
+	if m.loading || m.err != nil || m.cursor < 0 || m.cursor >= len(m.rows) {
+		return m, nil
+	}
+	topic := m.rows[m.cursor].topic
+	step := -1
+	if forward {
+		step = 1
+	}
+	for i := m.cursor + step; i >= 0 && i < len(m.rows); i += step {
+		other := m.rows[i].topic
+		sameParent := topic.ParentID == nil && other.ParentID == nil
+		if topic.ParentID != nil && other.ParentID != nil {
+			sameParent = *topic.ParentID == *other.ParentID
+		}
+		if !sameParent {
+			continue
+		}
+		m.saving, m.saveErr = true, nil
+		ctx, svc, route, details, view := m.ctx, m.service, m.route.ID, m.detailsID, m.screenID
+		return m, func() tea.Msg {
+			positions, err := svc.SwapTopics(ctx, route, topic.ID, other.ID)
+			if err != nil {
+				return routeToRouteView(details, view, routeChangesFailedMsg{err: err})
+			}
+			return routeToRouteView(details, view, routeTopicsReorderedMsg{positions: positions})
+		}
+	}
+	return m, nil
+}
+
 func (m routeViewModel) InputMode() inputMode {
 	if m.topicForm != nil {
 		return m.topicForm.InputMode()
@@ -437,6 +468,17 @@ func progressStatusLabel(status domain.ProgressStatus) string {
 	}
 }
 
+func studyStatusLabel(status domain.ProgressStatus) string {
+	switch status.Effective() {
+	case domain.ProgressLearning, domain.ProgressNeedsPractice:
+		return "текущая"
+	case domain.ProgressMastered:
+		return "завершённая"
+	default:
+		return "предстоящая"
+	}
+}
+
 func progressBar(summary domain.ProgressSummary) string {
 	filled := 0
 	if summary.Total() > 0 {
@@ -466,26 +508,43 @@ func (m routeViewModel) View() string {
 	text.WriteString(title)
 	total := m.summaries[0]
 	fmt.Fprintf(&text, "Освоено %d/%d тем\n\n", total.Mastered, total.Total())
+	current := total.Learning + total.NeedsPractice
+	fmt.Fprintf(&text, "Текущих: %d · Предстоящих: %d\n\n", current, total.NotStarted)
+	extraHeaderLines := 2
 	var revisionCount, excludedMastered int
+	var suggestedTopic string
 	for _, row := range routeTopicRows(m.topics) {
-		if !row.hasChildren && row.effectivelyExcluded && row.topic.Status == domain.ProgressMastered {
+		if row.hasChildren {
+			continue
+		}
+		if row.effectivelyExcluded && row.topic.Status == domain.ProgressMastered {
 			excludedMastered++
 		}
 		if row.topic.Revision && !row.effectivelyExcluded {
 			revisionCount++
 		}
+		if current == 0 && suggestedTopic == "" && !row.effectivelyExcluded && row.topic.Status.Effective() != domain.ProgressMastered {
+			suggestedTopic = row.topic.Name
+		}
 	}
 	if excludedMastered > 0 {
 		fmt.Fprintf(&text, "Ранее освоено среди исключённых: %d тем\n\n", excludedMastered)
+		extraHeaderLines += 2
 	}
 	if m.showExcluded {
 		text.WriteString("Показаны исключённые темы\n\n")
+		extraHeaderLines += 2
 	}
 	if len(m.rows) == 0 {
 		text.WriteString("Все темы исключены. Нажмите " + m.keys.ShowExcluded.Help().Key + ", чтобы показать их и восстановить.")
 	}
 	if revisionCount > 0 {
 		fmt.Fprintf(&text, "К повторению: %d тем\n\n", revisionCount)
+		extraHeaderLines += 2
+	}
+	if suggestedTopic != "" {
+		text.WriteString("Рекомендуется начать: " + suggestedTopic + "\n\n")
+		extraHeaderLines += 2
 	}
 	var preview []string
 	if m.cursor >= 0 && m.cursor < len(m.rows) && m.rows[m.cursor].topic.Notes != "" {
@@ -494,7 +553,7 @@ func (m routeViewModel) View() string {
 			preview = append(preview[:3], "…")
 		}
 	}
-	height := m.height
+	height := max(1, m.height-extraHeaderLines)
 	if len(preview) > 0 {
 		height = max(1, height-len(preview)-3)
 	}
@@ -528,6 +587,9 @@ func (m routeViewModel) View() string {
 			if m.rows[i].topic.Revision {
 				text.WriteString(" · повторить")
 			}
+			if !m.rows[i].effectivelyExcluded {
+				text.WriteString(" · " + studyStatusLabel(m.rows[i].topic.Status))
+			}
 		}
 	}
 	if len(preview) > 0 {
@@ -540,35 +602,4 @@ func (m routeViewModel) View() string {
 		text.WriteString("\n\nНе удалось сохранить изменения. Изменение не применено; повторите действие.")
 	}
 	return text.String()
-}
-
-func (m routeViewModel) moveTopic(forward bool) (routeViewModel, tea.Cmd) {
-	if m.loading || m.err != nil || m.cursor < 0 || m.cursor >= len(m.rows) {
-		return m, nil
-	}
-	topic := m.rows[m.cursor].topic
-	step := -1
-	if forward {
-		step = 1
-	}
-	for i := m.cursor + step; i >= 0 && i < len(m.rows); i += step {
-		other := m.rows[i].topic
-		sameParent := topic.ParentID == nil && other.ParentID == nil
-		if topic.ParentID != nil && other.ParentID != nil {
-			sameParent = *topic.ParentID == *other.ParentID
-		}
-		if !sameParent {
-			continue
-		}
-		m.saving, m.saveErr = true, nil
-		ctx, svc, route, details, view := m.ctx, m.service, m.route.ID, m.detailsID, m.screenID
-		return m, func() tea.Msg {
-			positions, err := svc.SwapTopics(ctx, route, topic.ID, other.ID)
-			if err != nil {
-				return routeToRouteView(details, view, routeChangesFailedMsg{err: err})
-			}
-			return routeToRouteView(details, view, routeTopicsReorderedMsg{positions: positions})
-		}
-	}
-	return m, nil
 }
