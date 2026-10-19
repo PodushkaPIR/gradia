@@ -42,7 +42,7 @@ func (s *Store) ListRouteTopics(ctx context.Context, id domain.RouteID) ([]domai
 		}
 		return nil, err
 	}
-	rows, err := s.db.QueryContext(ctx, `SELECT t.id, t.route_id, t.parent_id, t.name, t.position, t.created_at, t.updated_at, COALESCE(p.status, 'not_started'), t.notes_md FROM route_topics t LEFT JOIN route_topic_progress p ON p.topic_id = t.id WHERE t.route_id = ? ORDER BY t.parent_id, t.position, t.id`, id)
+	rows, err := s.db.QueryContext(ctx, `SELECT t.id, t.route_id, t.parent_id, t.name, t.position, t.created_at, t.updated_at, COALESCE(p.status, 'not_started'), t.notes_md, COALESCE(p.revision, 0), t.excluded FROM route_topics t LEFT JOIN route_topic_progress p ON p.topic_id = t.id WHERE t.route_id = ? ORDER BY t.parent_id, t.position, t.id`, id)
 	if err != nil {
 		return nil, err
 	}
@@ -52,7 +52,7 @@ func (s *Store) ListRouteTopics(ctx context.Context, id domain.RouteID) ([]domai
 		var topic domain.RouteTopic
 		var parent sql.NullInt64
 		var created, updated int64
-		if err := rows.Scan(&topic.ID, &topic.RouteID, &parent, &topic.Name, &topic.Position, &created, &updated, &topic.Status, &topic.Notes); err != nil {
+		if err := rows.Scan(&topic.ID, &topic.RouteID, &parent, &topic.Name, &topic.Position, &created, &updated, &topic.Status, &topic.Notes, &topic.Revision, &topic.Excluded); err != nil {
 			return nil, err
 		}
 		if parent.Valid {

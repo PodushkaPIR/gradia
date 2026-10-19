@@ -69,6 +69,9 @@ func TestRouteProgressPersistsAndIsIsolated(t *testing.T) {
 	if err := store.SetRouteTopicStatus(ctx, first.ID, group, domain.ProgressMastered, time.Now()); !errors.Is(err, domain.ErrTopicHasSubtopics) {
 		t.Fatal("репозиторий должен проверять конечность темы")
 	}
+	if err := store.SetRouteTopicRevision(ctx, first.ID, group, true, time.Now()); !errors.Is(err, domain.ErrTopicHasSubtopics) {
+		t.Fatal("повторение доступно только для конечной темы")
+	}
 	if err := store.SetRouteTopicStatus(ctx, second.ID, leaf, domain.ProgressMastered, time.Now()); !errors.Is(err, domain.ErrRouteTopicNotFound) {
 		t.Fatal("тема из чужого маршрута должна отклоняться")
 	}

@@ -13,6 +13,10 @@ type RouteRepository interface {
 	ListRouteTopics(context.Context, domain.RouteID) ([]domain.RouteTopic, error)
 	SetRouteTopicStatus(context.Context, domain.RouteID, domain.RouteTopicID, domain.ProgressStatus, time.Time) error
 	SetRouteTopicNote(context.Context, domain.RouteID, domain.RouteTopicID, string, time.Time) error
+	SetRouteTopicRevision(context.Context, domain.RouteID, domain.RouteTopicID, bool, time.Time) error
+	ListRouteTopicProgressHistory(context.Context, domain.RouteID, domain.RouteTopicID) ([]domain.RouteProgressChange, error)
+	SetRouteTopicExcluded(context.Context, domain.RouteID, domain.RouteTopicID, bool, time.Time) error
+	ListRouteTopicExclusionHistory(context.Context, domain.RouteID, domain.RouteTopicID) ([]domain.RouteTopicExclusionChange, error)
 }
 
 type RouteService struct{ repo RouteRepository }
@@ -80,4 +84,44 @@ func (s *RouteService) SetNote(ctx context.Context, routeID domain.RouteID, topi
 		return domain.ErrRouteTopicNotFound
 	}
 	return s.repo.SetRouteTopicNote(ctx, routeID, topicID, markdown, time.Now().UTC().Truncate(time.Millisecond))
+}
+
+func (s *RouteService) SetRevision(ctx context.Context, routeID domain.RouteID, topicID domain.RouteTopicID, revision bool) error {
+	if routeID <= 0 {
+		return domain.ErrRouteNotFound
+	}
+	if topicID <= 0 {
+		return domain.ErrRouteTopicNotFound
+	}
+	return s.repo.SetRouteTopicRevision(ctx, routeID, topicID, revision, time.Now().UTC().Truncate(time.Millisecond))
+}
+
+func (s *RouteService) ProgressHistory(ctx context.Context, routeID domain.RouteID, topicID domain.RouteTopicID) ([]domain.RouteProgressChange, error) {
+	if routeID <= 0 {
+		return nil, domain.ErrRouteNotFound
+	}
+	if topicID <= 0 {
+		return nil, domain.ErrRouteTopicNotFound
+	}
+	return s.repo.ListRouteTopicProgressHistory(ctx, routeID, topicID)
+}
+
+func (s *RouteService) SetExcluded(ctx context.Context, routeID domain.RouteID, topicID domain.RouteTopicID, excluded bool) error {
+	if routeID <= 0 {
+		return domain.ErrRouteNotFound
+	}
+	if topicID <= 0 {
+		return domain.ErrRouteTopicNotFound
+	}
+	return s.repo.SetRouteTopicExcluded(ctx, routeID, topicID, excluded, time.Now().UTC().Truncate(time.Millisecond))
+}
+
+func (s *RouteService) ExclusionHistory(ctx context.Context, routeID domain.RouteID, topicID domain.RouteTopicID) ([]domain.RouteTopicExclusionChange, error) {
+	if routeID <= 0 {
+		return nil, domain.ErrRouteNotFound
+	}
+	if topicID <= 0 {
+		return nil, domain.ErrRouteTopicNotFound
+	}
+	return s.repo.ListRouteTopicExclusionHistory(ctx, routeID, topicID)
 }

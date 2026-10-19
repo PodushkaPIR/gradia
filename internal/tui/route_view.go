@@ -20,18 +20,28 @@ type routeProgressSavedMsg struct {
 	status  domain.ProgressStatus
 }
 type routeProgressFailedMsg struct{ err error }
+type routeExclusionSavedMsg struct {
+	topicID  domain.RouteTopicID
+	excluded bool
+}
+type routeRevisionSavedMsg struct {
+	topicID  domain.RouteTopicID
+	revision bool
+}
 type routeNoteSavedMsg struct {
 	topicID  domain.RouteTopicID
 	markdown string
 }
 type routeNoteFailedMsg struct{ err error }
 type routeTopicRow struct {
-	topic       domain.RouteTopic
-	depth       int
-	hasChildren bool
+	topic               domain.RouteTopic
+	depth               int
+	hasChildren         bool
+	effectivelyExcluded bool
 }
 
 func routeTopicRows(topics []domain.RouteTopic) []routeTopicRow {
+	excluded := domain.RouteTopicExclusions(topics)
 	children := make(map[domain.RouteTopicID][]domain.RouteTopic)
 	for _, topic := range topics {
 		var parent domain.RouteTopicID
@@ -55,7 +65,7 @@ func routeTopicRows(topics []domain.RouteTopic) []routeTopicRow {
 			return
 		}
 		for _, topic := range children[parent] {
-			rows = append(rows, routeTopicRow{topic: topic, depth: depth, hasChildren: len(children[topic.ID]) > 0})
+			rows = append(rows, routeTopicRow{topic: topic, depth: depth, hasChildren: len(children[topic.ID]) > 0, effectivelyExcluded: excluded[topic.ID]})
 			walk(topic.ID, depth+1)
 		}
 	}
@@ -69,6 +79,8 @@ type routeViewModel struct {
 	route               domain.Route
 	detailsID, screenID uint64
 	rows                []routeTopicRow
+	topics              []domain.RouteTopic
+	showExcluded        bool
 	cursor, height      int
 	width               int
 	note                *noteForm
@@ -79,6 +91,38 @@ type routeViewModel struct {
 	saveErr             error
 	summaries           map[domain.RouteTopicID]domain.ProgressSummary
 	keys                routeViewKeyMap
+}
+
+// rebuildRows сохраняет выбор по ID, даже когда меняется видимость соседних веток.
+func (m routeViewModel) rebuildRows() routeViewModel {
+	var selected domain.RouteTopicID
+	if m.cursor >= 0 && m.cursor < len(m.rows) {
+		selected = m.rows[m.cursor].topic.ID
+	}
+	m.rows = routeTopicRows(m.topics)
+	if !m.showExcluded {
+		m.rows = slices.DeleteFunc(m.rows, func(row routeTopicRow) bool { return row.effectivelyExcluded })
+	}
+	m.summaries = app.RouteProgressSummary(m.topics)
+	m.cursor = max(0, min(m.cursor, len(m.rows)-1))
+	for i, row := range m.rows {
+		if row.topic.ID == selected {
+			m.cursor = i
+			break
+		}
+	}
+	return m
+}
+
+func (m routeViewModel) updateTopic(id domain.RouteTopicID, apply func(*domain.RouteTopic)) routeViewModel {
+	m.topics = slices.Clone(m.topics)
+	for i := range m.topics {
+		if m.topics[i].ID == id {
+			apply(&m.topics[i])
+			break
+		}
+	}
+	return m.rebuildRows()
 }
 
 func (m routeViewModel) reload() (routeViewModel, tea.Cmd) {
@@ -99,42 +143,32 @@ func (m routeViewModel) reload() (routeViewModel, tea.Cmd) {
 func (m routeViewModel) Update(msg tea.Msg) (routeViewModel, tea.Cmd) {
 	switch msg := msg.(type) {
 	case routeTopicsLoadedMsg:
-		m.rows, m.loading, m.err = routeTopicRows(msg.topics), false, nil
+		m.topics, m.loading, m.err = slices.Clone(msg.topics), false, nil
 		m.saveErr = nil
-		m.summaries = app.RouteProgressSummary(msg.topics)
-		m.cursor = max(0, min(m.cursor, len(m.rows)-1))
-		return m, nil
+		return m.rebuildRows(), nil
 	case routeTopicsFailedMsg:
 		m.loading, m.err = false, msg.err
 		return m, nil
 	case routeProgressSavedMsg:
 		m.saving, m.saveErr = false, nil
-		m.rows = slices.Clone(m.rows)
-		for i := range m.rows {
-			if m.rows[i].topic.ID == msg.topicID {
-				m.rows[i].topic.Status = msg.status
-				break
+		return m.updateTopic(msg.topicID, func(topic *domain.RouteTopic) {
+			topic.Status = msg.status
+			if msg.status != domain.ProgressMastered {
+				topic.Revision = false
 			}
-		}
-		var topics []domain.RouteTopic
-		for _, row := range m.rows {
-			topics = append(topics, row.topic)
-		}
-		m.summaries = app.RouteProgressSummary(topics)
-		return m, nil
+		}), nil
 	case routeProgressFailedMsg:
 		m.saving, m.saveErr = false, msg.err
 		return m, nil
+	case routeRevisionSavedMsg:
+		m.saving, m.saveErr = false, nil
+		return m.updateTopic(msg.topicID, func(topic *domain.RouteTopic) { topic.Revision = msg.revision }), nil
+	case routeExclusionSavedMsg:
+		m.saving, m.saveErr = false, nil
+		return m.updateTopic(msg.topicID, func(topic *domain.RouteTopic) { topic.Excluded = msg.excluded }), nil
 	case routeNoteSavedMsg:
 		m.note, m.noteTopicID = nil, 0
-		m.rows = slices.Clone(m.rows)
-		for i := range m.rows {
-			if m.rows[i].topic.ID == msg.topicID {
-				m.rows[i].topic.Notes = msg.markdown
-				break
-			}
-		}
-		return m, nil
+		return m.updateTopic(msg.topicID, func(topic *domain.RouteTopic) { topic.Notes = msg.markdown }), nil
 	case routeNoteFailedMsg:
 		if m.note != nil {
 			note, cmd := m.note.fail(msg.err)
@@ -169,6 +203,13 @@ func (m routeViewModel) Update(msg tea.Msg) (routeViewModel, tea.Cmd) {
 	}
 	if pressed, ok := msg.(tea.KeyPressMsg); ok {
 		switch {
+		case key.Matches(pressed, m.keys.Exclude.Binding):
+			return m.changeExclusion()
+		case key.Matches(pressed, m.keys.ShowExcluded.Binding):
+			if !m.loading && m.err == nil {
+				m.showExcluded = !m.showExcluded
+				return m.rebuildRows(), nil
+			}
 		case key.Matches(pressed, m.keys.EditNote.Binding):
 			if !m.loading && m.err == nil && m.cursor >= 0 && m.cursor < len(m.rows) {
 				topic := m.rows[m.cursor].topic
@@ -179,6 +220,8 @@ func (m routeViewModel) Update(msg tea.Msg) (routeViewModel, tea.Cmd) {
 			}
 		case key.Matches(pressed, m.keys.NextStatus.Binding):
 			return m.changeStatus(true)
+		case key.Matches(pressed, m.keys.Revision.Binding):
+			return m.changeRevision()
 		case key.Matches(pressed, m.keys.PreviousStatus.Binding):
 			return m.changeStatus(false)
 		case key.Matches(pressed, m.keys.Reload.Binding):
@@ -224,6 +267,41 @@ func (m routeViewModel) InputMode() inputMode {
 	return inputNavigation
 }
 
+func (m routeViewModel) changeRevision() (routeViewModel, tea.Cmd) {
+	if m.loading || m.err != nil || m.cursor < 0 || m.cursor >= len(m.rows) || m.rows[m.cursor].hasChildren {
+		return m, nil
+	}
+	topic := m.rows[m.cursor].topic
+	if topic.Status != domain.ProgressMastered {
+		return m, nil
+	}
+	m.saving, m.saveErr = true, nil
+	ctx, svc, route, details, view := m.ctx, m.service, m.route.ID, m.detailsID, m.screenID
+	revision := !topic.Revision
+	return m, func() tea.Msg {
+		if err := svc.SetRevision(ctx, route, topic.ID, revision); err != nil {
+			return routeToRouteView(details, view, routeProgressFailedMsg{err: err})
+		}
+		return routeToRouteView(details, view, routeRevisionSavedMsg{topicID: topic.ID, revision: revision})
+	}
+}
+
+func (m routeViewModel) changeExclusion() (routeViewModel, tea.Cmd) {
+	if m.loading || m.err != nil || m.cursor < 0 || m.cursor >= len(m.rows) {
+		return m, nil
+	}
+	topic := m.rows[m.cursor].topic
+	excluded := !topic.Excluded
+	m.saving, m.saveErr = true, nil
+	ctx, svc, route, details, view := m.ctx, m.service, m.route.ID, m.detailsID, m.screenID
+	return m, func() tea.Msg {
+		if err := svc.SetExcluded(ctx, route, topic.ID, excluded); err != nil {
+			return routeToRouteView(details, view, routeProgressFailedMsg{err: err})
+		}
+		return routeToRouteView(details, view, routeExclusionSavedMsg{topicID: topic.ID, excluded: excluded})
+	}
+}
+
 func progressStatusLabel(status domain.ProgressStatus) string {
 	switch status.Effective() {
 	case domain.ProgressLearning:
@@ -256,13 +334,34 @@ func (m routeViewModel) View() string {
 	if m.err != nil {
 		return title + "Не удалось загрузить темы. Нажмите " + m.keys.Reload.Help().Key + " для повторной попытки."
 	}
-	if len(m.rows) == 0 {
+	if len(m.topics) == 0 {
 		return title + "В этом маршруте пока нет тем."
 	}
 	var text strings.Builder
 	text.WriteString(title)
 	total := m.summaries[0]
 	fmt.Fprintf(&text, "Освоено %d/%d тем\n\n", total.Mastered, total.Total())
+	var revisionCount, excludedMastered int
+	for _, row := range routeTopicRows(m.topics) {
+		if !row.hasChildren && row.effectivelyExcluded && row.topic.Status == domain.ProgressMastered {
+			excludedMastered++
+		}
+		if row.topic.Revision && !row.effectivelyExcluded {
+			revisionCount++
+		}
+	}
+	if excludedMastered > 0 {
+		fmt.Fprintf(&text, "Ранее освоено среди исключённых: %d тем\n\n", excludedMastered)
+	}
+	if m.showExcluded {
+		text.WriteString("Показаны исключённые темы\n\n")
+	}
+	if len(m.rows) == 0 {
+		text.WriteString("Все темы исключены. Нажмите " + m.keys.ShowExcluded.Help().Key + ", чтобы показать их и восстановить.")
+	}
+	if revisionCount > 0 {
+		fmt.Fprintf(&text, "К повторению: %d тем\n\n", revisionCount)
+	}
 	var preview []string
 	if m.cursor >= 0 && m.cursor < len(m.rows) && m.rows[m.cursor].topic.Notes != "" {
 		preview = strings.Split(m.rows[m.cursor].topic.Notes, "\n")
@@ -291,11 +390,19 @@ func (m routeViewModel) View() string {
 			text.WriteString("• ")
 		}
 		text.WriteString(m.rows[i].topic.Name)
+		if m.rows[i].topic.Excluded {
+			text.WriteString(" [исключено]")
+		} else if m.rows[i].effectivelyExcluded {
+			text.WriteString(" [исключено с разделом]")
+		}
 		if m.rows[i].hasChildren {
 			summary := m.summaries[m.rows[i].topic.ID]
 			fmt.Fprintf(&text, "  %s %d/%d освоено · %d изучается · %d нужна практика", progressBar(summary), summary.Mastered, summary.Total(), summary.Learning, summary.NeedsPractice)
 		} else {
 			text.WriteString("  — " + progressStatusLabel(m.rows[i].topic.Status))
+			if m.rows[i].topic.Revision {
+				text.WriteString(" · повторить")
+			}
 		}
 	}
 	if len(preview) > 0 {

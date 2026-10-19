@@ -23,6 +23,7 @@ type progressRepoStub struct {
 func (r *progressRepoStub) ListRouteTopics(context.Context, domain.RouteID) ([]domain.RouteTopic, error) {
 	return slices.Clone(r.topics), nil
 }
+
 func (r *progressRepoStub) SetRouteTopicStatus(_ context.Context, route domain.RouteID, id domain.RouteTopicID, status domain.ProgressStatus, at time.Time) error {
 	r.writes++
 	if r.writeErr != nil {
@@ -31,10 +32,62 @@ func (r *progressRepoStub) SetRouteTopicStatus(_ context.Context, route domain.R
 	for i := range r.topics {
 		if r.topics[i].ID == id {
 			r.topics[i].Status = status
+			if status != domain.ProgressMastered {
+				r.topics[i].Revision = false
+			}
 			return nil
 		}
 	}
 	return domain.ErrRouteTopicNotFound
+}
+
+func (r *progressRepoStub) SetRouteTopicRevision(_ context.Context, route domain.RouteID, id domain.RouteTopicID, revision bool, at time.Time) error {
+	r.writes++
+	if r.writeErr != nil {
+		return r.writeErr
+	}
+	for i := range r.topics {
+		if r.topics[i].ID == id {
+			r.topics[i].Revision = revision
+			return nil
+		}
+	}
+	return domain.ErrRouteTopicNotFound
+}
+
+func TestRevisionCommandLifecycle(t *testing.T) {
+	repo := &progressRepoStub{topics: []domain.RouteTopic{{ID: 2, RouteID: 10, Name: "Цикл for", Status: domain.ProgressMastered}}}
+	m := routeViewModel{ctx: context.Background(), service: app.NewRouteService(repo), route: domain.Route{ID: 10}, keys: newRouteViewKeyMap(), height: 10}
+	m, _ = m.Update(routeTopicsLoadedMsg{topics: repo.topics})
+	m, cmd := m.Update(keypress('v'))
+	if cmd == nil || repo.writes != 0 || m.rows[0].topic.Revision || m.InputMode() != inputBusy {
+		t.Fatal("revision must save through Cmd before display changes")
+	}
+	if _, duplicate := m.Update(keypress('v')); duplicate != nil {
+		t.Fatal("duplicate save")
+	}
+	msg := cmd().(screenMsg).payload.(studentDetailsMsg).payload.(routeViewMsg).payload
+	m, _ = m.Update(msg)
+	if !m.rows[0].topic.Revision || !strings.Contains(m.View(), "освоено · повторить") || !strings.Contains(m.View(), "Освоено 1/1 тем") {
+		t.Fatal("revision must remain separate from mastery")
+	}
+	repo.writeErr = errors.New("save failed")
+	m, cmd = m.Update(keypress('v'))
+	msg = cmd().(screenMsg).payload.(studentDetailsMsg).payload.(routeViewMsg).payload
+	m, _ = m.Update(msg)
+	if !m.rows[0].topic.Revision || m.saveErr == nil || m.InputMode() != inputNavigation {
+		t.Fatal("failed revision save changed UI")
+	}
+	repo.writeErr = nil
+	m, cmd = m.Update(tea.KeyPressMsg{Code: tea.KeyBackspace})
+	msg = cmd().(screenMsg).payload.(studentDetailsMsg).payload.(routeViewMsg).payload
+	m, _ = m.Update(msg)
+	if m.rows[0].topic.Revision || m.rows[0].topic.Status != domain.ProgressNeedsPractice {
+		t.Fatal("downgrade did not clear revision")
+	}
+	if _, cmd := m.Update(keypress('v')); cmd != nil {
+		t.Fatal("cannot flag unmastered topic")
+	}
 }
 
 func TestProgressKeysAndErrors(t *testing.T) {

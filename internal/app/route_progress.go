@@ -16,7 +16,7 @@ func RouteProgressSummary(topics []domain.RouteTopic) map[domain.RouteTopicID]do
 	var visit func(domain.RouteTopic, int) domain.ProgressSummary
 	visit = func(topic domain.RouteTopic, depth int) domain.ProgressSummary {
 		var summary domain.ProgressSummary
-		if depth > domain.TopicMaxDepth {
+		if depth > domain.TopicMaxDepth || topic.Excluded {
 			return summary
 		}
 		if len(children[topic.ID]) == 0 {

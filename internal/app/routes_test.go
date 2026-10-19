@@ -16,6 +16,50 @@ type routeRepositoryStub struct {
 	writes int
 }
 
+func (r *routeRepositoryStub) SetRouteTopicExcluded(context.Context, domain.RouteID, domain.RouteTopicID, bool, time.Time) error {
+	r.writes++
+	return r.err
+}
+
+func TestRouteExclusionServiceValidatesIDsAndPropagatesErrors(t *testing.T) {
+	ctx := context.Background()
+	repo := &routeRepositoryStub{}
+	service := NewRouteService(repo)
+	if err := service.SetExcluded(ctx, 0, 1, true); !errors.Is(err, domain.ErrRouteNotFound) {
+		t.Fatal(err)
+	}
+	if err := service.SetExcluded(ctx, 1, 0, true); !errors.Is(err, domain.ErrRouteTopicNotFound) {
+		t.Fatal(err)
+	}
+	if _, err := service.ExclusionHistory(ctx, 0, 1); !errors.Is(err, domain.ErrRouteNotFound) {
+		t.Fatal(err)
+	}
+	if _, err := service.ExclusionHistory(ctx, 1, 0); !errors.Is(err, domain.ErrRouteTopicNotFound) {
+		t.Fatal(err)
+	}
+	if repo.writes != 0 {
+		t.Fatal("invalid IDs reached repository")
+	}
+	repo.err = errors.New("storage unavailable")
+	if err := service.SetExcluded(ctx, 1, 2, true); !errors.Is(err, repo.err) {
+		t.Fatal("exclusion error lost")
+	}
+	if _, err := service.ExclusionHistory(ctx, 1, 2); !errors.Is(err, repo.err) {
+		t.Fatal("history error lost")
+	}
+}
+func (r *routeRepositoryStub) ListRouteTopicExclusionHistory(context.Context, domain.RouteID, domain.RouteTopicID) ([]domain.RouteTopicExclusionChange, error) {
+	return nil, r.err
+}
+
+func (r *routeRepositoryStub) SetRouteTopicRevision(context.Context, domain.RouteID, domain.RouteTopicID, bool, time.Time) error {
+	r.writes++
+	return r.err
+}
+func (r *routeRepositoryStub) ListRouteTopicProgressHistory(context.Context, domain.RouteID, domain.RouteTopicID) ([]domain.RouteProgressChange, error) {
+	return nil, r.err
+}
+
 func (r *routeRepositoryStub) ListStudentRoutes(context.Context, domain.StudentID) ([]domain.Route, error) {
 	r.calls++
 	return nil, r.err

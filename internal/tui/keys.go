@@ -132,12 +132,17 @@ type routeViewKeyMap struct {
 	Back                       shortcut
 	NextStatus, PreviousStatus shortcut
 	EditNote                   shortcut
+	Revision                   shortcut
+	Exclude, ShowExcluded      shortcut
 }
 
 func newRouteViewKeyMap() routeViewKeyMap {
 	return routeViewKeyMap{listKeyMap: newListKeyMap(), globalKeyMap: newGlobalKeyMap(), Back: newShortcut("Esc", "назад", "Вернуться к карточке ученика", "esc"),
 		NextStatus:     newShortcut("Space", "статус", "Следующий статус конечной темы", "space"),
 		PreviousStatus: newShortcut("Backspace", "назад", "Предыдущий статус конечной темы", "backspace"),
+		Revision:       newShortcut("v", "повторение", "Отметить освоенную тему для повторения / завершить повторение", "v"),
+		Exclude:        newShortcut("x", "исключить/вернуть", "Исключить / восстановить тему или раздел; личные исключения потомков сохраняются", "x"),
+		ShowExcluded:   newShortcut("a", "исключённые", "Показать / скрыть исключённые темы; исключения предков также скрывают ветку", "a"),
 		EditNote:       newShortcut("e", "заметка", "Редактировать Markdown-заметку темы", "e")}
 }
 

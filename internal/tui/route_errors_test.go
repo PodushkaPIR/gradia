@@ -18,6 +18,20 @@ type routeRepoStub struct {
 	calls  int
 }
 
+func (r *routeRepoStub) SetRouteTopicExcluded(context.Context, domain.RouteID, domain.RouteTopicID, bool, time.Time) error {
+	return r.err
+}
+func (r *routeRepoStub) ListRouteTopicExclusionHistory(context.Context, domain.RouteID, domain.RouteTopicID) ([]domain.RouteTopicExclusionChange, error) {
+	return nil, r.err
+}
+
+func (r *routeRepoStub) SetRouteTopicRevision(context.Context, domain.RouteID, domain.RouteTopicID, bool, time.Time) error {
+	return r.err
+}
+func (r *routeRepoStub) ListRouteTopicProgressHistory(context.Context, domain.RouteID, domain.RouteTopicID) ([]domain.RouteProgressChange, error) {
+	return nil, r.err
+}
+
 func (r *routeRepoStub) ListStudentRoutes(context.Context, domain.StudentID) ([]domain.Route, error) {
 	return r.routes, nil
 }

@@ -29,6 +29,26 @@ func TestRouteProgressCountsOnlyLeaves(t *testing.T) {
 	}
 }
 
+func TestRouteProgressExcludesBranchesWithoutTurningParentsIntoLeaves(t *testing.T) {
+	parent, nested := domain.RouteTopicID(1), domain.RouteTopicID(2)
+	topics := []domain.RouteTopic{
+		{ID: 1, Status: domain.ProgressMastered},
+		{ID: 2, ParentID: &parent, Excluded: true},
+		{ID: 3, ParentID: &nested, Status: domain.ProgressMastered, Revision: true},
+		{ID: 4, ParentID: &parent, Status: domain.ProgressLearning, Excluded: true},
+		{ID: 5, Status: domain.ProgressNeedsPractice},
+	}
+	summary := RouteProgressSummary(topics)
+	if summary[0].Total() != 1 || summary[0].NeedsPractice != 1 || summary[1].Total() != 0 || summary[3].Total() != 0 {
+		t.Fatalf("excluded descendants counted or parent became leaf: %+v", summary)
+	}
+	topics[1].Excluded = false
+	summary = RouteProgressSummary(topics)
+	if summary[0].Total() != 2 || summary[0].Mastered != 1 || summary[1].Mastered != 1 {
+		t.Fatalf("restored branch missing: %+v", summary)
+	}
+}
+
 func TestSetStatusRejectsParentAndUnknownTopic(t *testing.T) {
 	parent := domain.RouteTopicID(1)
 	repo := &routeRepositoryStub{topics: []domain.RouteTopic{{ID: 1, RouteID: 10}, {ID: 2, RouteID: 10, ParentID: &parent}}}
