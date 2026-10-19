@@ -22,6 +22,9 @@ type studentDetailsModel struct {
 	routesService                *app.RouteService
 	templatesService             *app.TemplateService
 	reportService                *app.ReportService
+	homeworkService              *app.HomeworkService
+	homework                     *homeworkModel
+	homeworkSeq                  uint64
 	reportGenerating             bool
 	reportPDFExporting           bool
 	reportPDFPath                string
@@ -153,9 +156,25 @@ func (m studentDetailsModel) Update(msg tea.Msg) (studentDetailsModel, tea.Cmd) 
 		view, cmd := m.view.Update(msg.payload)
 		m.view = &view
 		return m, cmd
+	case homeworkMsg:
+		if m.homework == nil || m.homework.screenID != msg.screenID {
+			return m, nil
+		}
+		homework, cmd := m.homework.Update(msg.payload)
+		m.homework = &homework
+		return m, cmd
 	case tea.WindowSizeMsg:
 		m.height = max(1, msg.Height-12)
 		m.width = msg.Width
+	}
+	if m.homework != nil {
+		if pressed, ok := msg.(tea.KeyPressMsg); ok && key.Matches(pressed, m.homework.keys.Back.Binding) && m.homework.atRoot() && m.homework.InputMode() == inputNavigation {
+			m.homework = nil
+			return m, nil
+		}
+		homework, cmd := m.homework.Update(msg)
+		m.homework = &homework
+		return m, cmd
 	}
 	if m.reportGenerating {
 		return m, nil
@@ -218,6 +237,14 @@ func (m studentDetailsModel) Update(msg tea.Msg) (studentDetailsModel, tea.Cmd) 
 	}
 	if pressed, ok := msg.(tea.KeyPressMsg); ok {
 		switch {
+		case key.Matches(pressed, m.keys.Homework.Binding):
+			if m.homeworkService != nil {
+				m.homeworkSeq++
+				homework := homeworkModel{ctx: m.ctx, service: m.homeworkService, student: m.student.ID, detailsID: m.screenID, screenID: m.homeworkSeq, width: m.width, height: m.height, keys: newHomeworkKeyMap()}
+				homework, cmd := homework.reload()
+				m.homework = &homework
+				return m, cmd
+			}
 		case key.Matches(pressed, m.keys.Report.Binding):
 			return m.generateReport(false)
 		case key.Matches(pressed, m.keys.PDFReport.Binding):
@@ -271,9 +298,12 @@ func (m studentDetailsModel) Update(msg tea.Msg) (studentDetailsModel, tea.Cmd) 
 }
 
 func (m studentDetailsModel) atRoot() bool {
-	return m.picker == nil && m.view == nil && m.routeName == nil && m.routeDescription == nil && !m.reportGenerating
+	return m.homework == nil && m.picker == nil && m.view == nil && m.routeName == nil && m.routeDescription == nil && !m.reportGenerating
 }
 func (m studentDetailsModel) InputMode() inputMode {
+	if m.homework != nil {
+		return m.homework.InputMode()
+	}
 	if m.reportGenerating {
 		return inputBusy
 	}
@@ -294,6 +324,9 @@ func (m studentDetailsModel) InputMode() inputMode {
 
 func (m studentDetailsModel) View() string {
 	title := "Ученик — " + m.student.Name + "\n\n"
+	if m.homework != nil {
+		return title + m.homework.View()
+	}
 	if m.reportGenerating {
 		if m.reportPDFExporting {
 			return title + "Экспорт PDF…\n\nHTML-отчёт сохранён: " + m.reportPath
@@ -357,6 +390,9 @@ func (m studentDetailsModel) View() string {
 }
 
 func (m studentDetailsModel) ShortHelp() string {
+	if m.homework != nil {
+		return m.homework.ShortHelp()
+	}
 	if m.reportGenerating {
 		return ""
 	}
@@ -384,10 +420,13 @@ func (m studentDetailsModel) ShortHelp() string {
 		}
 		return shortHelp(m.view.keys.CreateTopic, m.view.keys.AddSubtopic, m.view.keys.EditTopic, m.view.keys.NextStatus, m.view.keys.ShowExcluded, m.view.keys.Back, m.view.keys.Help)
 	}
-	return shortHelp(m.keys.Open, m.keys.Create, m.keys.EditName, m.keys.EditDescription, m.keys.Report, m.keys.PDFReport, m.keys.Back, m.keys.Help)
+	return shortHelp(m.keys.Open, m.keys.Create, m.keys.Homework, m.keys.EditName, m.keys.EditDescription, m.keys.Report, m.keys.PDFReport, m.keys.Back, m.keys.Help)
 }
 
 func (m studentDetailsModel) FullHelp() (string, []shortcut) {
+	if m.homework != nil {
+		return m.homework.FullHelp()
+	}
 	if m.picker != nil {
 		keys := m.picker.keys
 		return "Выбор шаблона", []shortcut{keys.helpBinding(), keys.Select, keys.Reload, keys.Cancel, keys.Help}
@@ -397,5 +436,5 @@ func (m studentDetailsModel) FullHelp() (string, []shortcut) {
 		return "Учебный план", []shortcut{keys.helpBinding(), keys.CreateTopic, keys.AddSubtopic, keys.EditTopic, keys.MoveTopicUp, keys.MoveTopicDown, keys.NextStatus, keys.PreviousStatus, keys.Revision, keys.Exclude, keys.ShowExcluded, keys.EditNote, keys.Reload, keys.Back, keys.Help, keys.Quit}
 	}
 	keys := m.keys
-	return "Карточка ученика", []shortcut{keys.helpBinding(), keys.Open, keys.Create, keys.EditName, keys.EditDescription, keys.Report, keys.PDFReport, keys.Reload, keys.Back, keys.Help, keys.Quit}
+	return "Карточка ученика", []shortcut{keys.helpBinding(), keys.Open, keys.Create, keys.Homework, keys.EditName, keys.EditDescription, keys.Report, keys.PDFReport, keys.Reload, keys.Back, keys.Help, keys.Quit}
 }

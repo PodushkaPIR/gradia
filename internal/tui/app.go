@@ -30,6 +30,11 @@ func (a App) WithReports(reports *app.ReportService) App {
 	return a
 }
 
+func (a App) WithHomework(homework *app.HomeworkService) App {
+	a.students.homeworkService = homework
+	return a
+}
+
 func (a App) Init() tea.Cmd {
 	return a.students.Init()
 }

@@ -107,6 +107,7 @@ type studentDetailsKeyMap struct {
 	Create, Open, Back        shortcut
 	EditName, EditDescription shortcut
 	Report, PDFReport         shortcut
+	Homework                  shortcut
 }
 
 func newStudentDetailsKeyMap() studentDetailsKeyMap {
@@ -117,6 +118,7 @@ func newStudentDetailsKeyMap() studentDetailsKeyMap {
 		EditDescription: newShortcut("e", "описание плана", "Редактировать Markdown-описание выбранного учебного плана", "e"),
 		Report:          newShortcut("h", "HTML-отчёт", "Сохранить HTML-отчёт выбранного учебного плана и открыть в браузере", "h"),
 		PDFReport:       newShortcut("f", "PDF-отчёт", "Экспортировать выбранный учебный план в PDF через локальный Chromium/Chrome", "f"),
+		Homework:        newShortcut("w", "домашние задания", "Домашние задания ученика", "w"),
 		Back:            newShortcut("Esc", "назад", "Вернуться к ученикам", "esc")}
 }
 
@@ -160,6 +162,34 @@ func newRouteViewKeyMap() routeViewKeyMap {
 }
 
 type noteFormKeyMap struct{ Save, Cancel shortcut }
+
+type homeworkKeyMap struct {
+	listKeyMap
+	globalKeyMap
+	Create, Open, Rename, EditTask, Toggle, Back shortcut
+}
+
+func newHomeworkKeyMap() homeworkKeyMap {
+	return homeworkKeyMap{listKeyMap: newListKeyMap(), globalKeyMap: newGlobalKeyMap(),
+		Create:   newShortcut("n", "создать", "Создать домашнее задание / добавить задачу", "n"),
+		Open:     newShortcut("Enter", "открыть", "Открыть задачи домашнего задания", "enter"),
+		Rename:   newShortcut("t", "название", "Переименовать домашнее задание", "t"),
+		EditTask: newShortcut("e", "задача", "Редактировать текст, темы и сложность задачи", "e"),
+		Toggle:   newShortcut("Space", "выполнение", "Отметить / снять выполнение выбранной задачи", "space"),
+		Back:     newShortcut("Esc", "назад", "Вернуться к списку домашних заданий / карточке ученика", "esc"),
+	}
+}
+
+type homeworkTaskFormKeyMap struct{ Save, Cancel, Next, Previous shortcut }
+
+func newHomeworkTaskFormKeyMap() homeworkTaskFormKeyMap {
+	return homeworkTaskFormKeyMap{
+		Save:     newShortcut("Ctrl+S", "сохранить", "Сохранить задачу", "ctrl+s"),
+		Cancel:   newShortcut("Esc", "отменить", "Отменить редактирование", "esc"),
+		Next:     newShortcut("Tab", "поле", "Следующее поле", "tab"),
+		Previous: newShortcut("Shift+Tab", "назад", "Предыдущее поле", "shift+tab"),
+	}
+}
 
 func newNoteFormKeyMap() noteFormKeyMap {
 	return noteFormKeyMap{Save: newShortcut("Ctrl+S", "сохранить", "Сохранить заметку", "ctrl+s"), Cancel: newShortcut("Esc", "отменить", "Отменить редактирование", "esc")}
