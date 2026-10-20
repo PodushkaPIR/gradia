@@ -104,22 +104,25 @@ func newStudentsKeyMap() studentsKeyMap {
 type studentDetailsKeyMap struct {
 	listKeyMap
 	globalKeyMap
-	Create, Open, Back        shortcut
-	EditName, EditDescription shortcut
-	Report, PDFReport         shortcut
-	Homework                  shortcut
+	Create, Open, Back                  shortcut
+	EditName, EditDescription           shortcut
+	Report, PDFReport                   shortcut
+	ReportWithHomework, PDFWithHomework shortcut
+	Homework                            shortcut
 }
 
 func newStudentDetailsKeyMap() studentDetailsKeyMap {
 	return studentDetailsKeyMap{listKeyMap: newListKeyMap(), globalKeyMap: newGlobalKeyMap(),
-		Create:          newShortcut("n", "создать план", "Создать учебный план из шаблона", "n"),
-		Open:            newShortcut("Enter", "открыть план", "Открыть учебный план", "enter"),
-		EditName:        newShortcut("t", "название плана", "Изменить название выбранного учебного плана", "t"),
-		EditDescription: newShortcut("e", "описание плана", "Редактировать Markdown-описание выбранного учебного плана", "e"),
-		Report:          newShortcut("h", "HTML-отчёт", "Сохранить HTML-отчёт выбранного учебного плана и открыть в браузере", "h"),
-		PDFReport:       newShortcut("f", "PDF-отчёт", "Экспортировать выбранный учебный план в PDF через локальный Chromium/Chrome", "f"),
-		Homework:        newShortcut("w", "домашние задания", "Домашние задания ученика", "w"),
-		Back:            newShortcut("Esc", "назад", "Вернуться к ученикам", "esc")}
+		Create:             newShortcut("n", "создать план", "Создать учебный план из шаблона", "n"),
+		Open:               newShortcut("Enter", "открыть план", "Открыть учебный план", "enter"),
+		EditName:           newShortcut("t", "название плана", "Изменить название выбранного учебного плана", "t"),
+		EditDescription:    newShortcut("e", "описание плана", "Редактировать Markdown-описание выбранного учебного плана", "e"),
+		Report:             newShortcut("h", "HTML-отчёт", "Сохранить HTML-отчёт выбранного учебного плана и открыть в браузере", "h"),
+		PDFReport:          newShortcut("f", "PDF-отчёт", "Экспортировать выбранный учебный план в PDF через локальный Chromium/Chrome", "f"),
+		ReportWithHomework: newShortcut("H", "HTML + ДЗ", "Сохранить HTML-отчёт со сводкой всех домашних заданий ученика", "H"),
+		PDFWithHomework:    newShortcut("F", "PDF + ДЗ", "Экспортировать PDF со сводкой всех домашних заданий ученика", "F"),
+		Homework:           newShortcut("w", "домашние задания", "Домашние задания ученика", "w"),
+		Back:               newShortcut("Esc", "назад", "Вернуться к ученикам", "esc")}
 }
 
 type routePickerKeyMap struct {

@@ -9,7 +9,7 @@
 * { box-sizing: border-box; }
 body { margin: 0; }
 main { width: min(100% - 2rem, 56rem); margin: 2rem auto; overflow-wrap: anywhere; }
-header, .summary, .topics { background: white; border: 1px solid #dbe4ef; border-radius: 1rem; padding: 1.5rem; margin-bottom: 1rem; }
+header, .summary, .topics, .homework { background: white; border: 1px solid #dbe4ef; border-radius: 1rem; padding: 1.5rem; margin-bottom: 1rem; }
 .brand { color: #375ad3; font-size: .8rem; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; }
 h1 { font-size: clamp(1.5rem, 5vw, 2.3rem); line-height: 1.2; margin: .6rem 0; }
 h2 { font-size: 1.2rem; margin: 0 0 1rem; }
@@ -28,13 +28,16 @@ h3 { font-size: 1rem; margin: 0; overflow-wrap: anywhere; }
 .revision { background: #fff2da; color: #805a13; }
 .subsummary, footer { font-size: .85rem; color: #526279; }
 footer { text-align: center; padding: .5rem; }
+.homework-list { list-style: none; padding: 0; margin: 1rem 0 0; }
+.homework-item { padding: .7rem 0; border-top: 1px solid #e3eaf2; break-inside: avoid; }
+.homework h2, .homework > p { break-after: avoid; }
 .print-tools { margin: 0 0 1rem; }
 .print-tools button { font: inherit; font-weight: 650; color: white; background: #375ad3; border: 0; border-radius: .6rem; padding: .65rem 1rem; cursor: pointer; }
 .print-tools button:focus-visible { outline: 3px solid #203047; outline-offset: 3px; }
 .print-tools p { font-size: .85rem; color: #526279; margin: .5rem 0; }
 @media (max-width: 600px) {
   main { width: calc(100% - 1rem); margin: .5rem auto; }
-  header, .summary, .topics { padding: 1rem; border-radius: .7rem; }
+  header, .summary, .topics, .homework { padding: 1rem; border-radius: .7rem; }
   .topic { margin-inline-start: calc(var(--depth) * .6rem); }
   .stats { gap: .4rem 1rem; }
 }
@@ -43,7 +46,7 @@ footer { text-align: center; padding: .5rem; }
   :root { color: #111; background: white; font-size: 11pt; line-height: 1.45; }
   main { width: 100%; margin: 0; }
   .print-tools { display: none !important; }
-  header, .summary, .topics { padding: 4mm; margin-bottom: 4mm; border-radius: 0; border-color: #bbb; }
+  header, .summary, .topics, .homework { padding: 4mm; margin-bottom: 4mm; border-radius: 0; border-color: #bbb; }
   header, .summary { break-inside: avoid; }
   h1 { font-size: 20pt; }
   h2 { font-size: 13pt; }
@@ -83,6 +86,15 @@ footer { text-align: center; padding: .5rem; }
 </article>
 {{else}}<p>В плане нет активных тем.</p>{{end}}
 </section>
+{{with .Homework}}<section class="homework" aria-label="Домашние задания ученика">
+<h2>Домашние задания ученика</h2>
+<p class="subsummary">Сводка по всем ДЗ ученика, независимо от выбранного учебного плана.</p>
+<p>Выполнено {{.CompletedTasks}} из {{.TotalTasks}} задач</p>
+<ul class="homework-list">
+{{range .Items}}<li class="homework-item"><h3>{{.Name}}</h3><span>{{.CompletedTasks}}/{{.TotalTasks}} выполнено</span></li>
+{{else}}<li>Домашних заданий пока нет.</li>{{end}}
+</ul>
+</section>{{end}}
 <footer>Локальный отчёт · Gradia</footer>
 </main>
 </body>

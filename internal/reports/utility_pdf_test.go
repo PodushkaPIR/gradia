@@ -28,8 +28,9 @@ func TestLocalUtilityExportsPDFWithoutChangingHTML(t *testing.T) {
 	defer cancel()
 	htmlPath, err := reports.NewHTMLWriter(dir).Write(ctx, app.LearningReport{
 		StudentName: "Иван Иванов", PlanName: "Индивидуальный Python", Description: "Локальный PDF-экспорт выбранного плана.",
-		Summary: domain.ProgressSummary{Learning: 1, Mastered: 1},
-		Topics:  []app.LearningReportTopic{{Name: "Циклы", Status: domain.ProgressLearning}, {Name: "Функции", Status: domain.ProgressMastered, Revision: true}},
+		Summary:  domain.ProgressSummary{Learning: 1, Mastered: 1},
+		Homework: &app.LearningReportHomeworkSummary{CompletedTasks: 1, TotalTasks: 3, Items: []app.LearningReportHomework{{Name: "Практика по циклам", CompletedTasks: 1, TotalTasks: 3}}},
+		Topics:   []app.LearningReportTopic{{Name: "Циклы", Status: domain.ProgressLearning}, {Name: "Функции", Status: domain.ProgressMastered, Revision: true}},
 	})
 	if err != nil {
 		t.Fatal(err)

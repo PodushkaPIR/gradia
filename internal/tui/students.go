@@ -167,6 +167,8 @@ func (m studentsModel) Update(msg tea.Msg) (studentsModel, tea.Cmd) {
 				details.keys.Homework.SetEnabled(m.homeworkService != nil)
 				details.keys.Report.SetEnabled(m.reportService != nil)
 				details.keys.PDFReport.SetEnabled(m.reportService != nil && m.reportService.PDFExportEnabled())
+				details.keys.ReportWithHomework.SetEnabled(m.reportService != nil && m.reportService.HomeworkReportEnabled())
+				details.keys.PDFWithHomework.SetEnabled(m.reportService != nil && m.reportService.HomeworkReportEnabled() && m.reportService.PDFExportEnabled())
 				details, cmd := details.reload()
 				m.details = &details
 				return m, cmd

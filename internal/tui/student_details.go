@@ -26,6 +26,7 @@ type studentDetailsModel struct {
 	homework                     *homeworkModel
 	homeworkSeq                  uint64
 	reportGenerating             bool
+	reportRequest                learningReportRequest
 	reportPDFExporting           bool
 	reportPDFPath                string
 	reportPDFErr                 error
@@ -247,9 +248,13 @@ func (m studentDetailsModel) Update(msg tea.Msg) (studentDetailsModel, tea.Cmd) 
 				return m, cmd
 			}
 		case key.Matches(pressed, m.keys.Report.Binding):
-			return m.generateReport(false)
+			return m.generateReport(learningReportRequest{})
 		case key.Matches(pressed, m.keys.PDFReport.Binding):
-			return m.generateReport(true)
+			return m.generateReport(learningReportRequest{pdf: true})
+		case key.Matches(pressed, m.keys.ReportWithHomework.Binding):
+			return m.generateReport(learningReportRequest{options: app.ReportOptions{IncludeHomework: true}})
+		case key.Matches(pressed, m.keys.PDFWithHomework.Binding):
+			return m.generateReport(learningReportRequest{pdf: true, options: app.ReportOptions{IncludeHomework: true}})
 		case key.Matches(pressed, m.keys.EditName.Binding):
 			if !m.loading && m.err == nil && m.cursor >= 0 && m.cursor < len(m.routes) {
 				route := m.routes[m.cursor]
@@ -437,5 +442,5 @@ func (m studentDetailsModel) FullHelp() (string, []shortcut) {
 		return "Учебный план", []shortcut{keys.helpBinding(), keys.CreateTopic, keys.AddSubtopic, keys.EditTopic, keys.MoveTopicUp, keys.MoveTopicDown, keys.NextStatus, keys.PreviousStatus, keys.Revision, keys.Exclude, keys.ShowExcluded, keys.EditNote, keys.Reload, keys.Back, keys.Help, keys.Quit}
 	}
 	keys := m.keys
-	return "Карточка ученика", []shortcut{keys.helpBinding(), keys.Open, keys.Create, keys.Homework, keys.EditName, keys.EditDescription, keys.Report, keys.PDFReport, keys.Reload, keys.Back, keys.Help, keys.Quit}
+	return "Карточка ученика", []shortcut{keys.helpBinding(), keys.Open, keys.Create, keys.Homework, keys.EditName, keys.EditDescription, keys.Report, keys.PDFReport, keys.ReportWithHomework, keys.PDFWithHomework, keys.Reload, keys.Back, keys.Help, keys.Quit}
 }

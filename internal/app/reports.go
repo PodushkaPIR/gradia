@@ -12,6 +12,19 @@ type LearningReport struct {
 	StudentName, PlanName, Description string
 	Summary                            domain.ProgressSummary
 	Topics                             []LearningReportTopic
+	Homework                           *LearningReportHomeworkSummary
+}
+
+type ReportOptions struct{ IncludeHomework bool }
+
+type LearningReportHomeworkSummary struct {
+	Items                      []LearningReportHomework
+	TotalTasks, CompletedTasks int
+}
+
+type LearningReportHomework struct {
+	Name                       string
+	TotalTasks, CompletedTasks int
 }
 
 type LearningReportTopic struct {
@@ -37,6 +50,7 @@ type ReportService struct {
 	writer   ReportWriter
 	open     func(context.Context, string) error
 	pdf      PDFExporter
+	homework *HomeworkService
 }
 
 func NewReportService(students *StudentService, routes *RouteService, writer ReportWriter, open func(context.Context, string) error) *ReportService {
@@ -49,6 +63,14 @@ func (s *ReportService) WithPDFExporter(exporter PDFExporter) *ReportService {
 	return &configured
 }
 
+func (s *ReportService) WithHomework(homework *HomeworkService) *ReportService {
+	configured := *s
+	configured.homework = homework
+	return &configured
+}
+
+func (s *ReportService) HomeworkReportEnabled() bool { return s.homework != nil }
+
 func (s *ReportService) PDFExportEnabled() bool { return s.pdf != nil }
 
 func (s *ReportService) ExportPDF(ctx context.Context, htmlPath string) (string, error) {
@@ -59,6 +81,10 @@ func (s *ReportService) ExportPDF(ctx context.Context, htmlPath string) (string,
 }
 
 func (s *ReportService) Generate(ctx context.Context, studentID domain.StudentID, routeID domain.RouteID) (string, error) {
+	return s.GenerateWithOptions(ctx, studentID, routeID, ReportOptions{})
+}
+
+func (s *ReportService) GenerateWithOptions(ctx context.Context, studentID domain.StudentID, routeID domain.RouteID, options ReportOptions) (string, error) {
 	if studentID <= 0 {
 		return "", domain.ErrStudentNotFound
 	}
@@ -104,6 +130,22 @@ func (s *ReportService) Generate(ctx context.Context, studentID domain.StudentID
 			continue
 		}
 		report.Topics = append(report.Topics, LearningReportTopic{Name: row.Topic.Name, Depth: row.Depth, HasChildren: row.HasChildren, Status: row.Topic.Status.Effective(), Revision: !row.HasChildren && row.Topic.Revision, Summary: summaries[row.Topic.ID]})
+	}
+	if options.IncludeHomework {
+		if s.homework == nil {
+			return "", errors.New("сводка домашних заданий не настроена")
+		}
+		items, err := s.homework.List(ctx, studentID)
+		if err != nil {
+			return "", err
+		}
+		summary := &LearningReportHomeworkSummary{}
+		for _, item := range items {
+			summary.Items = append(summary.Items, LearningReportHomework{Name: item.Name, TotalTasks: item.TotalTasks, CompletedTasks: item.CompletedTasks})
+			summary.TotalTasks += item.TotalTasks
+			summary.CompletedTasks += item.CompletedTasks
+		}
+		report.Homework = summary
 	}
 	return s.writer.Write(ctx, report)
 }

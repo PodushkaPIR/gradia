@@ -47,7 +47,7 @@ func run() error {
 	templates := app.NewTemplateService(store)
 	routes := app.NewRouteService(store)
 	homework := app.NewHomeworkService(store).WithAttachments(attachments.NewLocalFiles(filepath.Join(filepath.Dir(path), "attachments")), desktop.OpenFile)
-	reportService := app.NewReportService(students, routes, reports.NewHTMLWriter(filepath.Join(filepath.Dir(path), "reports")), reports.OpenInBrowser).WithPDFExporter(reports.NewChromiumPDFExporter(*pdfBrowserFlag))
+	reportService := app.NewReportService(students, routes, reports.NewHTMLWriter(filepath.Join(filepath.Dir(path), "reports")), reports.OpenInBrowser).WithPDFExporter(reports.NewChromiumPDFExporter(*pdfBrowserFlag)).WithHomework(homework)
 	_, err = tea.NewProgram(tui.NewApp(ctx, students, templates, routes).WithReports(reportService).WithHomework(homework), tea.WithContext(ctx)).Run()
 	return err
 }
