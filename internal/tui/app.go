@@ -134,6 +134,7 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if key.Matches(pressed, a.keys.TaskBank.Binding) && a.screenInputMode().allowsScreenSwitch() && a.taskBankService != nil {
 			a.taskBankSeq++
 			model := taskBankModel{ctx: a.students.ctx, service: a.taskBankService, screenID: a.taskBankSeq, width: a.width, height: max(1, a.height-8), keys: newTaskBankKeyMap()}
+			model.keys.Attachments.SetEnabled(a.taskBankService.AttachmentsEnabled())
 			model, cmd := model.reload()
 			a.taskBank = &model
 			return a, cmd

@@ -55,6 +55,8 @@ type taskBankModel struct {
 	detail                            *domain.TaskBankTask
 	detailOffset                      int
 	keys                              taskBankKeyMap
+	attachments                       *taskAttachmentsModel
+	attachmentSeq                     uint64
 }
 
 func (m taskBankModel) reload() (taskBankModel, tea.Cmd) {
@@ -75,6 +77,13 @@ func (m taskBankModel) reload() (taskBankModel, tea.Cmd) {
 
 func (m taskBankModel) Update(msg tea.Msg) (taskBankModel, tea.Cmd) {
 	switch msg := msg.(type) {
+	case bankAttachmentsMsg:
+		if m.attachments == nil || m.attachments.screenID != msg.screenID {
+			return m, nil
+		}
+		child, cmd := m.attachments.Update(msg.payload)
+		m.attachments = &child
+		return m, cmd
 	case taskBankLoadedMsg:
 		if msg.seq != m.loadSeq {
 			return m, nil
@@ -140,6 +149,15 @@ func (m taskBankModel) Update(msg tea.Msg) (taskBankModel, tea.Cmd) {
 		if m.detail != nil {
 			m.detailOffset = max(0, min(m.detailOffset, len(m.detailLines())-m.height))
 		}
+	}
+	if m.attachments != nil {
+		if pressed, ok := msg.(tea.KeyPressMsg); ok && key.Matches(pressed, m.attachments.keys.Back.Binding) && m.attachments.form == nil && m.attachments.InputMode() == inputNavigation {
+			m.attachments = nil
+			return m, nil
+		}
+		child, cmd := m.attachments.Update(msg)
+		m.attachments = &child
+		return m, cmd
 	}
 	if m.taskForm != nil {
 		form, action, cmd := m.taskForm.Update(msg)
@@ -214,6 +232,14 @@ func (m taskBankModel) Update(msg tea.Msg) (taskBankModel, tea.Cmd) {
 		if m.loading || m.err != nil {
 			return m, nil
 		}
+		if key.Matches(pressed, m.keys.Attachments.Binding) && m.service.AttachmentsEnabled() {
+			if m.detail != nil {
+				return m.openAttachments(*m.detail)
+			}
+			if m.view == bankTasks && m.cursor >= 0 && m.cursor < len(m.data.Tasks) {
+				return m.openAttachments(m.data.Tasks[m.cursor])
+			}
+		}
 		if m.detail != nil {
 			switch {
 			case key.Matches(pressed, m.keys.Edit.Binding):
@@ -285,6 +311,16 @@ func (m taskBankModel) chooseView(view bankView) taskBankModel {
 	return m
 }
 
+func (m taskBankModel) openAttachments(task domain.TaskBankTask) (taskBankModel, tea.Cmd) {
+	m.attachmentSeq++
+	bankID, screen := m.screenID, m.attachmentSeq
+	wrap := func(msg tea.Msg) tea.Msg { return routeToBankAttachments(bankID, screen, msg) }
+	child := taskAttachmentsModel{ctx: m.ctx, source: bankAttachmentSource{service: m.service, task: task.ID}, wrap: wrap, screenID: screen, taskContent: task.Content, width: m.width, height: m.height, keys: newAttachmentsKeyMap()}
+	child, cmd := child.reload()
+	m.attachments = &child
+	return m, cmd
+}
+
 func (m taskBankModel) openTaskForm(task *domain.TaskBankTask) (taskBankModel, tea.Cmd) {
 	input := domain.TaskBankInput{Subject: m.filter.Subject, Difficulty: domain.DifficultyEasy}
 	if m.filter.Topic != "" {
@@ -339,9 +375,12 @@ func (m taskBankModel) listLength() int {
 }
 
 func (m taskBankModel) atRoot() bool {
-	return m.view == bankTasks && m.detail == nil && m.taskForm == nil && m.nameForm == nil
+	return m.view == bankTasks && m.detail == nil && m.taskForm == nil && m.nameForm == nil && m.attachments == nil
 }
 func (m taskBankModel) InputMode() inputMode {
+	if m.attachments != nil {
+		return m.attachments.InputMode()
+	}
 	if m.taskForm != nil {
 		return m.taskForm.InputMode()
 	}
@@ -378,6 +417,9 @@ func (m taskBankModel) detailLines() []string {
 
 func (m taskBankModel) View() string {
 	const title = "Банк задач\n\n"
+	if m.attachments != nil {
+		return title + m.attachments.View()
+	}
 	if m.taskForm != nil {
 		return title + m.taskForm.View()
 	}
@@ -452,6 +494,9 @@ func (m taskBankModel) View() string {
 }
 
 func (m taskBankModel) ShortHelp() string {
+	if m.attachments != nil {
+		return m.attachments.ShortHelp()
+	}
 	if m.taskForm != nil {
 		return m.taskForm.ShortHelp()
 	}
@@ -459,7 +504,7 @@ func (m taskBankModel) ShortHelp() string {
 		return m.nameForm.ShortHelp()
 	}
 	if m.detail != nil {
-		return shortHelp(m.keys.Edit, m.keys.Back, m.keys.Help)
+		return shortHelp(m.keys.Edit, m.keys.Attachments, m.keys.Back, m.keys.Help)
 	}
 	if m.view == bankCollections {
 		return shortHelp(m.keys.Create, m.keys.Rename, m.keys.Open, m.keys.Back, m.keys.Help)
@@ -467,18 +512,21 @@ func (m taskBankModel) ShortHelp() string {
 	if m.view != bankTasks {
 		return shortHelp(m.keys.Open, m.keys.Back, m.keys.Help)
 	}
-	return shortHelp(m.keys.Open, m.keys.Create, m.keys.Edit, m.keys.Collections, m.keys.Back, m.keys.Help)
+	return shortHelp(m.keys.Open, m.keys.Create, m.keys.Edit, m.keys.Attachments, m.keys.Collections, m.keys.Back, m.keys.Help)
 }
 
 func (m taskBankModel) FullHelp() (string, []shortcut) {
+	if m.attachments != nil {
+		return m.attachments.FullHelp()
+	}
 	keys := m.keys
 	bindings := []shortcut{keys.helpBinding()}
 	if m.detail != nil {
-		bindings = append(bindings, keys.Edit)
+		bindings = append(bindings, keys.Edit, keys.Attachments)
 	} else if m.view == bankCollections {
 		bindings = append(bindings, keys.Create, keys.Rename, keys.Open, keys.Clear)
 	} else if m.view == bankTasks {
-		bindings = append(bindings, keys.Open, keys.Create, keys.Edit, keys.Subjects, keys.Topics, keys.Collections, keys.Clear)
+		bindings = append(bindings, keys.Open, keys.Create, keys.Edit, keys.Attachments, keys.Subjects, keys.Topics, keys.Collections, keys.Clear)
 	} else {
 		bindings = append(bindings, keys.Open, keys.Clear)
 	}

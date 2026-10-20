@@ -26,6 +26,15 @@ func routeToTaskBank(id uint64, msg tea.Msg) screenMsg {
 	return screenMsg{target: taskBankScreen, payload: taskBankMsg{screenID: id, payload: msg}}
 }
 
+type bankAttachmentsMsg struct {
+	screenID uint64
+	payload  tea.Msg
+}
+
+func routeToBankAttachments(bankID, attachmentsID uint64, msg tea.Msg) screenMsg {
+	return routeToTaskBank(bankID, bankAttachmentsMsg{screenID: attachmentsID, payload: msg})
+}
+
 // topicsMsg адресует результат конкретному экземпляру вложенного экрана тем.
 type topicsMsg struct {
 	screenID uint64

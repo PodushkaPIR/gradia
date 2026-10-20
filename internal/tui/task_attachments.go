@@ -8,16 +8,14 @@ import (
 
 	"charm.land/bubbles/v2/key"
 	tea "charm.land/bubbletea/v2"
-	"github.com/shesh/gradia/internal/app"
-	"github.com/shesh/gradia/internal/domain"
 )
 
-type attachmentsLoadedMsg struct{ items []domain.HomeworkAttachment }
+type attachmentsLoadedMsg struct{ items []taskAttachmentItem }
 type attachmentsLoadFailedMsg struct{ err error }
-type attachmentAddedMsg struct{ item domain.HomeworkAttachment }
+type attachmentAddedMsg struct{ item taskAttachmentItem }
 type attachmentImportFailedMsg struct{ err error }
 type attachmentExportedMsg struct {
-	id   domain.HomeworkAttachmentID
+	id   int64
 	path string
 }
 type attachmentExportFailedMsg struct{ err error }
@@ -26,40 +24,38 @@ type attachmentOpenedMsg struct {
 	err  error
 }
 
-type homeworkAttachmentsModel struct {
-	ctx                                   context.Context
-	service                               *app.HomeworkService
-	student                               domain.StudentID
-	homework                              domain.HomeworkID
-	task                                  domain.HomeworkTaskID
-	detailsID, homeworkScreenID, screenID uint64
-	taskContent                           string
-	items                                 []domain.HomeworkAttachment
-	cursor, width, height                 int
-	loading, saving                       bool
-	err, saveErr, openErr                 error
-	form                                  *attachmentForm
-	openedID                              domain.HomeworkAttachmentID
-	path                                  string
-	keys                                  attachmentsKeyMap
+type taskAttachmentsModel struct {
+	ctx                   context.Context
+	source                taskAttachmentSource
+	wrap                  func(tea.Msg) tea.Msg
+	screenID              uint64
+	taskContent           string
+	items                 []taskAttachmentItem
+	cursor, width, height int
+	loading, saving       bool
+	err, saveErr, openErr error
+	form                  *attachmentForm
+	openedID              int64
+	path                  string
+	keys                  attachmentsKeyMap
 }
 
-func (m homeworkAttachmentsModel) reload() (homeworkAttachmentsModel, tea.Cmd) {
+func (m taskAttachmentsModel) reload() (taskAttachmentsModel, tea.Cmd) {
 	if m.loading || m.saving || m.form != nil {
 		return m, nil
 	}
 	m.loading, m.err, m.saveErr = true, nil, nil
-	ctx, service, student, homework, task, details, parent, screen := m.ctx, m.service, m.student, m.homework, m.task, m.detailsID, m.homeworkScreenID, m.screenID
+	ctx, source, wrap := m.ctx, m.source, m.wrap
 	return m, func() tea.Msg {
-		items, err := service.Attachments(ctx, student, homework, task)
+		items, err := source.List(ctx)
 		if err != nil {
-			return routeToHomeworkAttachments(details, parent, screen, attachmentsLoadFailedMsg{err: err})
+			return wrap(attachmentsLoadFailedMsg{err: err})
 		}
-		return routeToHomeworkAttachments(details, parent, screen, attachmentsLoadedMsg{items: items})
+		return wrap(attachmentsLoadedMsg{items: items})
 	}
 }
 
-func (m homeworkAttachmentsModel) Update(msg tea.Msg) (homeworkAttachmentsModel, tea.Cmd) {
+func (m taskAttachmentsModel) Update(msg tea.Msg) (taskAttachmentsModel, tea.Cmd) {
 	switch msg := msg.(type) {
 	case attachmentsLoadedMsg:
 		m.items, m.loading, m.err = slices.Clone(msg.items), false, nil
@@ -69,9 +65,6 @@ func (m homeworkAttachmentsModel) Update(msg tea.Msg) (homeworkAttachmentsModel,
 		m.loading, m.err = false, msg.err
 		return m, nil
 	case attachmentAddedMsg:
-		if msg.item.TaskID != m.task {
-			return m, nil
-		}
 		m.form = nil
 		m.items = append(slices.Clone(m.items), msg.item)
 		m.cursor = len(m.items) - 1
@@ -85,9 +78,9 @@ func (m homeworkAttachmentsModel) Update(msg tea.Msg) (homeworkAttachmentsModel,
 		return m, cmd
 	case attachmentExportedMsg:
 		m.saving, m.saveErr, m.openErr, m.openedID, m.path = false, nil, nil, msg.id, msg.path
-		ctx, service, path, details, parent, screen := m.ctx, m.service, msg.path, m.detailsID, m.homeworkScreenID, m.screenID
+		ctx, source, path, wrap := m.ctx, m.source, msg.path, m.wrap
 		return m, func() tea.Msg {
-			return routeToHomeworkAttachments(details, parent, screen, attachmentOpenedMsg{path: path, err: service.OpenAttachment(ctx, path)})
+			return wrap(attachmentOpenedMsg{path: path, err: source.Open(ctx, path)})
 		}
 	case attachmentExportFailedMsg:
 		m.saving, m.saveErr = false, msg.err
@@ -108,13 +101,13 @@ func (m homeworkAttachmentsModel) Update(msg tea.Msg) (homeworkAttachmentsModel,
 			m.form = nil
 			return m, nil
 		case formSubmit:
-			ctx, service, student, homework, task, path, pages, details, parent, screen := m.ctx, m.service, m.student, m.homework, m.task, form.path.Value(), form.pages.Value(), m.detailsID, m.homeworkScreenID, m.screenID
+			ctx, source, path, pages, wrap := m.ctx, m.source, form.path.Value(), form.pages.Value(), m.wrap
 			return m, func() tea.Msg {
-				item, err := service.AttachFile(ctx, student, homework, task, path, pages)
+				item, err := source.Add(ctx, path, pages)
 				if err != nil {
-					return routeToHomeworkAttachments(details, parent, screen, attachmentImportFailedMsg{err: err})
+					return wrap(attachmentImportFailedMsg{err: err})
 				}
-				return routeToHomeworkAttachments(details, parent, screen, attachmentAddedMsg{item: item})
+				return wrap(attachmentAddedMsg{item: item})
 			}
 		}
 		return m, cmd
@@ -134,13 +127,13 @@ func (m homeworkAttachmentsModel) Update(msg tea.Msg) (homeworkAttachmentsModel,
 			if !m.loading && m.err == nil && m.cursor >= 0 && m.cursor < len(m.items) {
 				id := m.items[m.cursor].ID
 				m.saving, m.saveErr, m.openErr, m.path = true, nil, nil, ""
-				ctx, service, student, homework, task, details, parent, screen := m.ctx, m.service, m.student, m.homework, m.task, m.detailsID, m.homeworkScreenID, m.screenID
+				ctx, source, wrap := m.ctx, m.source, m.wrap
 				return m, func() tea.Msg {
-					path, err := service.ExportAttachment(ctx, student, homework, task, id)
+					path, err := source.Export(ctx, id)
 					if err != nil {
-						return routeToHomeworkAttachments(details, parent, screen, attachmentExportFailedMsg{err: err})
+						return wrap(attachmentExportFailedMsg{err: err})
 					}
-					return routeToHomeworkAttachments(details, parent, screen, attachmentExportedMsg{id: id, path: path})
+					return wrap(attachmentExportedMsg{id: id, path: path})
 				}
 			}
 		case key.Matches(pressed, m.keys.Reload.Binding):
@@ -154,7 +147,7 @@ func (m homeworkAttachmentsModel) Update(msg tea.Msg) (homeworkAttachmentsModel,
 	return m, nil
 }
 
-func (m homeworkAttachmentsModel) InputMode() inputMode {
+func (m taskAttachmentsModel) InputMode() inputMode {
 	if m.form != nil {
 		return m.form.InputMode()
 	}
@@ -164,7 +157,7 @@ func (m homeworkAttachmentsModel) InputMode() inputMode {
 	return inputNavigation
 }
 
-func (m homeworkAttachmentsModel) View() string {
+func (m taskAttachmentsModel) View() string {
 	line := taskContentPreview(m.taskContent, m.width-10)
 	title := "Вложения задачи — " + line + "\n\n"
 	if m.form != nil {
@@ -213,7 +206,7 @@ func (m homeworkAttachmentsModel) View() string {
 	return text.String()
 }
 
-func (m homeworkAttachmentsModel) ShortHelp() string {
+func (m taskAttachmentsModel) ShortHelp() string {
 	if m.form != nil {
 		return m.form.ShortHelp()
 	}
@@ -223,7 +216,7 @@ func (m homeworkAttachmentsModel) ShortHelp() string {
 	return shortHelp(m.keys.Open, m.keys.Create, m.keys.Back, m.keys.Help)
 }
 
-func (m homeworkAttachmentsModel) FullHelp() (string, []shortcut) {
+func (m taskAttachmentsModel) FullHelp() (string, []shortcut) {
 	keys := m.keys
 	return "Вложения задачи", []shortcut{keys.helpBinding(), keys.Open, keys.Create, keys.Reload, keys.Back, keys.Help, keys.Quit}
 }

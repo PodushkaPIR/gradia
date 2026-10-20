@@ -1,24 +1,12 @@
 package app
 
 import (
-	"bytes"
 	"context"
 	"errors"
-	"net/http"
-	"strings"
 	"time"
 
 	"github.com/shesh/gradia/internal/domain"
 )
-
-type HomeworkAttachmentFiles interface {
-	Read(context.Context, string) (domain.AttachmentFile, error)
-	Write(context.Context, domain.AttachmentFile) (string, error)
-}
-
-var ErrAttachmentFilesUnavailable = errors.New("работа с файлами не настроена")
-var ErrAttachmentPathRequired = errors.New("укажите путь к файлу")
-var ErrAttachmentRegularFileRequired = errors.New("выберите обычный файл изображения или PDF")
 
 func (s *HomeworkService) WithAttachments(files HomeworkAttachmentFiles, open func(context.Context, string) error) *HomeworkService {
 	configured := *s
@@ -39,33 +27,17 @@ func (s *HomeworkService) AttachFile(ctx context.Context, student domain.Student
 	if err := validateHomeworkTaskIDs(student, homework, task); err != nil {
 		return domain.HomeworkAttachment{}, err
 	}
-	pages, err := domain.NormalizeAttachmentPages(pages)
+	pages, err := validateAttachmentRequest(s.files, path, pages)
 	if err != nil {
 		return domain.HomeworkAttachment{}, err
-	}
-	if s.files == nil {
-		return domain.HomeworkAttachment{}, ErrAttachmentFilesUnavailable
-	}
-	if strings.TrimSpace(path) == "" {
-		return domain.HomeworkAttachment{}, ErrAttachmentPathRequired
 	}
 	// Reject foreign or missing tasks before reading a file from the caller's path.
 	if _, err := s.Attachments(ctx, student, homework, task); err != nil {
 		return domain.HomeworkAttachment{}, err
 	}
-	file, err := s.files.Read(ctx, path)
+	file, mediaType, err := readAttachment(ctx, s.files, path, pages)
 	if err != nil {
 		return domain.HomeworkAttachment{}, err
-	}
-	mediaType := http.DetectContentType(file.Data)
-	if len(file.Data) >= 4 && (bytes.Equal(file.Data[:4], []byte{'I', 'I', 42, 0}) || bytes.Equal(file.Data[:4], []byte{'M', 'M', 0, 42})) {
-		mediaType = "image/tiff"
-	}
-	if mediaType != "application/pdf" && !strings.HasPrefix(mediaType, "image/") {
-		return domain.HomeworkAttachment{}, domain.ErrAttachmentType
-	}
-	if pages != "" && mediaType != "application/pdf" {
-		return domain.HomeworkAttachment{}, domain.ErrAttachmentPagesOnlyPDF
 	}
 	metadata := domain.HomeworkAttachment{TaskID: task, Name: file.Name, MediaType: mediaType, Pages: pages, Size: int64(len(file.Data)), CreatedAt: time.Now().UTC().Truncate(time.Millisecond)}
 	return s.repo.AddHomeworkAttachment(ctx, student, homework, metadata, file.Data)

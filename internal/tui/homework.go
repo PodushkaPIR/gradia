@@ -49,7 +49,7 @@ type homeworkModel struct {
 	taskForm                          *homeworkTaskForm
 	editTaskID                        domain.HomeworkTaskID
 	keys                              homeworkKeyMap
-	attachments                       *homeworkAttachmentsModel
+	attachments                       *taskAttachmentsModel
 	attachmentSeq                     uint64
 }
 
@@ -267,7 +267,9 @@ func (m homeworkModel) Update(msg tea.Msg) (homeworkModel, tea.Cmd) {
 			if m.service.AttachmentsEnabled() && m.selected != nil && m.cursor >= 0 && m.cursor < len(m.tasks) {
 				m.attachmentSeq++
 				task := m.tasks[m.cursor]
-				child := homeworkAttachmentsModel{ctx: m.ctx, service: m.service, student: m.student, homework: m.selected.ID, task: task.ID, taskContent: task.Content, detailsID: m.detailsID, homeworkScreenID: m.screenID, screenID: m.attachmentSeq, width: m.width, height: m.height, keys: newAttachmentsKeyMap()}
+				details, parent, screen := m.detailsID, m.screenID, m.attachmentSeq
+				wrap := func(msg tea.Msg) tea.Msg { return routeToHomeworkAttachments(details, parent, screen, msg) }
+				child := taskAttachmentsModel{ctx: m.ctx, source: homeworkAttachmentSource{service: m.service, student: m.student, homework: m.selected.ID, task: task.ID}, taskContent: task.Content, wrap: wrap, screenID: screen, width: m.width, height: m.height, keys: newAttachmentsKeyMap()}
 				child, cmd := child.reload()
 				m.attachments = &child
 				return m, cmd
@@ -367,7 +369,7 @@ func (m homeworkModel) InputMode() inputMode {
 }
 
 func homeworkError(err error, fallback string) string {
-	for _, known := range []error{domain.ErrHomeworkNameRequired, domain.ErrHomeworkNameTooLong, domain.ErrTaskContentRequired, domain.ErrTaskTopicsRequired, domain.ErrInvalidTaskDifficulty, domain.ErrTopicNameTooLong, domain.ErrHomeworkNotFound, domain.ErrHomeworkTaskNotFound, domain.ErrAttachmentType, domain.ErrAttachmentPages, domain.ErrAttachmentPagesOnlyPDF, app.ErrAttachmentFilesUnavailable, app.ErrAttachmentPathRequired, app.ErrAttachmentRegularFileRequired} {
+	for _, known := range []error{domain.ErrHomeworkNameRequired, domain.ErrHomeworkNameTooLong, domain.ErrTaskContentRequired, domain.ErrTaskTopicsRequired, domain.ErrInvalidTaskDifficulty, domain.ErrTopicNameTooLong, domain.ErrHomeworkNotFound, domain.ErrHomeworkTaskNotFound} {
 		if errors.Is(err, known) {
 			return err.Error()
 		}

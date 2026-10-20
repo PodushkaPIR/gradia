@@ -226,6 +226,7 @@ type taskBankKeyMap struct {
 	listKeyMap
 	globalKeyMap
 	Create, Edit, Open, Subjects, Topics, Collections, Rename, Clear, Back shortcut
+	Attachments                                                            shortcut
 }
 
 func newTaskBankKeyMap() taskBankKeyMap {
@@ -236,6 +237,7 @@ func newTaskBankKeyMap() taskBankKeyMap {
 		Subjects:    newShortcut("s", "предмет", "Выбрать предмет (фильтр)", "s"),
 		Topics:      newShortcut("t", "тема", "Выбрать тему в текущем предмете (фильтр)", "t"),
 		Collections: newShortcut("c", "коллекции", "Коллекции: создать, переименовать, выбрать фильтр", "c"),
+		Attachments: newShortcut("a", "вложения", "Вложения выбранной задачи банка", "a"),
 		Rename:      newShortcut("t", "переименовать", "Переименовать выбранную коллекцию", "t"),
 		Clear:       newShortcut("x", "все задачи", "Сбросить фильтры предмета, темы и коллекции", "x"),
 		Back:        newShortcut("Esc", "назад", "Закрыть просмотр / вернуться к задачам / выйти из банка", "esc"),

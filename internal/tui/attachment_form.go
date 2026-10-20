@@ -4,6 +4,9 @@ import (
 	"charm.land/bubbles/v2/key"
 	"charm.land/bubbles/v2/textinput"
 	tea "charm.land/bubbletea/v2"
+	"errors"
+	"github.com/shesh/gradia/internal/app"
+	"github.com/shesh/gradia/internal/domain"
 )
 
 type attachmentForm struct {
@@ -78,8 +81,17 @@ func (m attachmentForm) Update(msg tea.Msg) (attachmentForm, formAction, tea.Cmd
 }
 
 func (m attachmentForm) fail(err error) (attachmentForm, tea.Cmd) {
-	m.saving, m.err = false, homeworkError(err, "Не удалось прикрепить файл. Проверьте путь и повторите Ctrl+S.")
+	m.saving, m.err = false, attachmentError(err, "Не удалось прикрепить файл. Проверьте путь и повторите Ctrl+S.")
 	return m.focusField(m.focus)
+}
+
+func attachmentError(err error, fallback string) string {
+	for _, known := range []error{domain.ErrAttachmentType, domain.ErrAttachmentPages, domain.ErrAttachmentPagesOnlyPDF, domain.ErrHomeworkNotFound, domain.ErrHomeworkTaskNotFound, domain.ErrHomeworkAttachmentNotFound, domain.ErrTaskBankTaskNotFound, domain.ErrTaskBankAttachmentNotFound, app.ErrAttachmentFilesUnavailable, app.ErrAttachmentPathRequired, app.ErrAttachmentRegularFileRequired} {
+		if errors.Is(err, known) {
+			return err.Error()
+		}
+	}
+	return fallback
 }
 
 func (m attachmentForm) InputMode() inputMode {

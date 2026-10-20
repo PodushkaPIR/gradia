@@ -23,9 +23,16 @@ type TaskBankRepository interface {
 	SaveBankTask(context.Context, domain.TaskBankTaskID, domain.TaskBankInput, time.Time) (domain.TaskBankTask, error)
 	CreateTaskCollection(context.Context, string, time.Time) (domain.TaskCollection, error)
 	RenameTaskCollection(context.Context, domain.TaskCollectionID, string, time.Time) (domain.TaskCollection, error)
+	ListBankAttachments(context.Context, domain.TaskBankTaskID) ([]domain.TaskBankAttachment, error)
+	AddBankAttachment(context.Context, domain.TaskBankAttachment, []byte) (domain.TaskBankAttachment, error)
+	GetBankAttachment(context.Context, domain.TaskBankTaskID, domain.TaskBankAttachmentID) (domain.TaskBankAttachment, []byte, error)
 }
 
-type TaskBankService struct{ repo TaskBankRepository }
+type TaskBankService struct {
+	repo     TaskBankRepository
+	files    AttachmentFiles
+	openFile func(context.Context, string) error
+}
 
 func NewTaskBankService(repo TaskBankRepository) *TaskBankService {
 	return &TaskBankService{repo: repo}
