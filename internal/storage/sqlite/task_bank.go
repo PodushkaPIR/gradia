@@ -16,10 +16,11 @@ const bankTaskColumns = `id, content_md, subject, difficulty, created_at, update
 const bankCollectionColumns = `id, name, created_at, updated_at, (SELECT COUNT(*) FROM task_bank_collection_tasks WHERE collection_id = task_bank_collections.id)`
 const bankTaskWhere = ` WHERE (? = '' OR t.subject = ?) AND (? = '' OR EXISTS (SELECT 1 FROM task_bank_task_topics p WHERE p.task_id = t.id AND p.topic_name = ?)) AND (? = 0 OR EXISTS (SELECT 1 FROM task_bank_collection_tasks m WHERE m.task_id = t.id AND m.collection_id = ?))`
 
-func scanBankTask(row interface{ Scan(...any) error }) (domain.TaskBankTask, error) {
+func scanBankTask(row interface{ Scan(...any) error }, extra ...any) (domain.TaskBankTask, error) {
 	var task domain.TaskBankTask
 	var created, updated int64
-	if err := row.Scan(&task.ID, &task.Content, &task.Subject, &task.Difficulty, &created, &updated); err != nil {
+	columns := []any{&task.ID, &task.Content, &task.Subject, &task.Difficulty, &created, &updated}
+	if err := row.Scan(append(columns, extra...)...); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return domain.TaskBankTask{}, domain.ErrTaskBankTaskNotFound
 		}

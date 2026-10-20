@@ -48,7 +48,10 @@ var taskBankMigration string
 //go:embed migrations/0014_task_bank_attachments.sql
 var taskBankAttachmentsMigration string
 
-var schemaMigrations = []string{studentsMigration, templatesMigration, templateTopicsMigration, topicHierarchyMigration, studentRoutesMigration, routeProgressMigration, routeTopicNotesMigration, routeRevisionHistoryMigration, routeTopicExclusionsMigration, routeTopicDepthMigration, homeworkMigration, homeworkAttachmentsMigration, taskBankMigration, taskBankAttachmentsMigration}
+//go:embed migrations/0015_task_pack_identity.sql
+var taskPackIdentityMigration string
+
+var schemaMigrations = []string{studentsMigration, templatesMigration, templateTopicsMigration, topicHierarchyMigration, studentRoutesMigration, routeProgressMigration, routeTopicNotesMigration, routeRevisionHistoryMigration, routeTopicExclusionsMigration, routeTopicDepthMigration, homeworkMigration, homeworkAttachmentsMigration, taskBankMigration, taskBankAttachmentsMigration, taskPackIdentityMigration}
 
 func (s *Store) migrate(ctx context.Context) error {
 	tx, err := s.db.BeginTx(ctx, nil)

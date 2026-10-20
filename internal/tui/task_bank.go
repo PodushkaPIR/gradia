@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"maps"
 	"slices"
 	"strings"
 
@@ -35,6 +36,8 @@ type bankTaskSavedMsg struct{ task domain.TaskBankTask }
 type bankTaskFailedMsg struct{ err error }
 type taskCollectionSavedMsg struct{ item domain.TaskCollection }
 type taskCollectionFailedMsg struct{ err error }
+type taskPackExportedMsg struct{ path string }
+type taskPackFailedMsg struct{ err error }
 
 type taskBankModel struct {
 	ctx                               context.Context
@@ -57,6 +60,10 @@ type taskBankModel struct {
 	keys                              taskBankKeyMap
 	attachments                       *taskAttachmentsModel
 	attachmentSeq                     uint64
+	marked                            map[domain.TaskBankTaskID]bool
+	exporting                         bool
+	packPath                          string
+	packErr                           error
 }
 
 func (m taskBankModel) reload() (taskBankModel, tea.Cmd) {
@@ -77,6 +84,12 @@ func (m taskBankModel) reload() (taskBankModel, tea.Cmd) {
 
 func (m taskBankModel) Update(msg tea.Msg) (taskBankModel, tea.Cmd) {
 	switch msg := msg.(type) {
+	case taskPackExportedMsg:
+		m.exporting, m.packPath, m.packErr = false, msg.path, nil
+		return m, nil
+	case taskPackFailedMsg:
+		m.exporting, m.packErr = false, msg.err
+		return m, nil
 	case bankAttachmentsMsg:
 		if m.attachments == nil || m.attachments.screenID != msg.screenID {
 			return m, nil
@@ -114,7 +127,7 @@ func (m taskBankModel) Update(msg tea.Msg) (taskBankModel, tea.Cmd) {
 			} else {
 				task := m.data.Tasks[index]
 				m.detail = &task
-				m.detailOffset = max(0, min(m.detailOffset, len(m.detailLines())-m.height))
+				m.detailOffset = max(0, min(m.detailOffset, len(m.detailLines())-m.detailHeight()))
 			}
 		}
 		return m, nil
@@ -147,8 +160,11 @@ func (m taskBankModel) Update(msg tea.Msg) (taskBankModel, tea.Cmd) {
 	case tea.WindowSizeMsg:
 		m.width, m.height = msg.Width, max(1, msg.Height-8)
 		if m.detail != nil {
-			m.detailOffset = max(0, min(m.detailOffset, len(m.detailLines())-m.height))
+			m.detailOffset = max(0, min(m.detailOffset, len(m.detailLines())-m.detailHeight()))
 		}
+	}
+	if m.exporting {
+		return m, nil
 	}
 	if m.attachments != nil {
 		if pressed, ok := msg.(tea.KeyPressMsg); ok && key.Matches(pressed, m.attachments.keys.Back.Binding) && m.attachments.form == nil && m.attachments.InputMode() == inputNavigation {
@@ -232,6 +248,17 @@ func (m taskBankModel) Update(msg tea.Msg) (taskBankModel, tea.Cmd) {
 		if m.loading || m.err != nil {
 			return m, nil
 		}
+		if key.Matches(pressed, m.keys.Export.Binding) && (m.view == bankTasks || m.detail != nil) {
+			return m.exportPack()
+		}
+		if key.Matches(pressed, m.keys.Mark.Binding) {
+			if m.detail != nil {
+				return m.toggleMark(m.detail.ID), nil
+			}
+			if m.view == bankTasks && m.cursor >= 0 && m.cursor < len(m.data.Tasks) {
+				return m.toggleMark(m.data.Tasks[m.cursor].ID), nil
+			}
+		}
 		if key.Matches(pressed, m.keys.Attachments.Binding) && m.service.AttachmentsEnabled() {
 			if m.detail != nil {
 				return m.openAttachments(*m.detail)
@@ -247,7 +274,7 @@ func (m taskBankModel) Update(msg tea.Msg) (taskBankModel, tea.Cmd) {
 			case key.Matches(pressed, m.keys.Up.Binding):
 				m.detailOffset = max(0, m.detailOffset-1)
 			case key.Matches(pressed, m.keys.Down.Binding):
-				m.detailOffset = min(max(0, len(m.detailLines())-m.height), m.detailOffset+1)
+				m.detailOffset = min(max(0, len(m.detailLines())-m.detailHeight()), m.detailOffset+1)
 			}
 			return m, nil
 		}
@@ -309,6 +336,42 @@ func (m taskBankModel) chooseView(view bankView) taskBankModel {
 	}
 	m.view, m.cursor = view, 0
 	return m
+}
+
+func (m taskBankModel) toggleMark(id domain.TaskBankTaskID) taskBankModel {
+	m.marked = maps.Clone(m.marked)
+	if m.marked == nil {
+		m.marked = make(map[domain.TaskBankTaskID]bool)
+	}
+	if m.marked[id] {
+		delete(m.marked, id)
+	} else {
+		m.marked[id] = true
+	}
+	if m.detail != nil {
+		m.detailOffset = max(0, min(m.detailOffset, len(m.detailLines())-m.detailHeight()))
+	}
+	return m
+}
+
+func (m taskBankModel) exportPack() (taskBankModel, tea.Cmd) {
+	if len(m.marked) == 0 {
+		m.packErr, m.packPath = app.ErrTaskPackSelectionRequired, ""
+		return m, nil
+	}
+	var ids []domain.TaskBankTaskID
+	for id := range m.marked {
+		ids = append(ids, id)
+	}
+	m.exporting, m.packErr, m.packPath = true, nil, ""
+	ctx, service, screen := m.ctx, m.service, m.screenID
+	return m, func() tea.Msg {
+		path, err := service.ExportPack(ctx, ids)
+		if err != nil {
+			return routeToTaskBank(screen, taskPackFailedMsg{err: err})
+		}
+		return routeToTaskBank(screen, taskPackExportedMsg{path: path})
+	}
 }
 
 func (m taskBankModel) openAttachments(task domain.TaskBankTask) (taskBankModel, tea.Cmd) {
@@ -378,6 +441,9 @@ func (m taskBankModel) atRoot() bool {
 	return m.view == bankTasks && m.detail == nil && m.taskForm == nil && m.nameForm == nil && m.attachments == nil
 }
 func (m taskBankModel) InputMode() inputMode {
+	if m.exporting {
+		return inputBusy
+	}
 	if m.attachments != nil {
 		return m.attachments.InputMode()
 	}
@@ -415,8 +481,35 @@ func (m taskBankModel) detailLines() []string {
 	return strings.Split(ansi.Hardwrap(text, max(1, m.width), true), "\n")
 }
 
+func (m taskBankModel) packNotice() string {
+	if errors.Is(m.packErr, app.ErrTaskPackSelectionRequired) {
+		return "\n\nОтметьте задачи клавишей Space перед экспортом."
+	}
+	if m.packErr != nil {
+		return "\n\nНе удалось экспортировать Task Pack. Повторите " + m.keys.Export.Help().Key + "."
+	}
+	if m.packPath != "" {
+		return "\n\n" + ansi.Hardwrap("Task Pack сохранён: "+m.packPath, max(1, m.width), true)
+	}
+	return ""
+}
+
+func (m taskBankModel) detailHeight() int {
+	height := m.height - strings.Count(m.packNotice(), "\n")
+	if len(m.marked) > 0 {
+		height--
+	}
+	return max(1, height)
+}
+
 func (m taskBankModel) View() string {
-	const title = "Банк задач\n\n"
+	title := "Банк задач\n\n"
+	if len(m.marked) > 0 {
+		title = fmt.Sprintf("Банк задач\nОтмечено: %d (во всех фильтрах)\n\n", len(m.marked))
+	}
+	if m.exporting {
+		return title + "Экспорт Task Pack…"
+	}
 	if m.attachments != nil {
 		return title + m.attachments.View()
 	}
@@ -434,8 +527,8 @@ func (m taskBankModel) View() string {
 	}
 	if m.detail != nil {
 		lines := m.detailLines()
-		start := max(0, min(m.detailOffset, len(lines)-max(1, m.height)))
-		return title + strings.Join(lines[start:min(len(lines), start+max(1, m.height))], "\n")
+		start := max(0, min(m.detailOffset, len(lines)-m.detailHeight()))
+		return title + strings.Join(lines[start:min(len(lines), start+m.detailHeight())], "\n") + m.packNotice()
 	}
 	var text strings.Builder
 	text.WriteString(title)
@@ -461,10 +554,10 @@ func (m taskBankModel) View() string {
 			text.WriteString("Предметы и темы появляются после создания задач. Esc — вернуться к задачам.")
 			return text.String()
 		}
-		text.WriteString("Пока пусто. " + m.keys.Create.Help().Key + " — создать, " + m.keys.Clear.Help().Key + " — сбросить фильтры.")
+		text.WriteString("Пока пусто. " + m.keys.Create.Help().Key + " — создать, " + m.keys.Clear.Help().Key + " — сбросить фильтры." + m.packNotice())
 		return text.String()
 	}
-	height := max(1, m.height-8)
+	height := max(1, m.detailHeight()-8)
 	start := max(0, m.cursor-height+1)
 	for i := start; i < min(m.listLength(), start+height); i++ {
 		if i > start {
@@ -484,16 +577,27 @@ func (m taskBankModel) View() string {
 			item := m.data.Collections[i]
 			fmt.Fprintf(&text, "%s — %d задач", item.Name, item.TaskCount)
 		default:
+			if m.keys.Mark.Enabled() {
+				if m.marked[m.data.Tasks[i].ID] {
+					text.WriteString("[x] ")
+				} else {
+					text.WriteString("[ ] ")
+				}
+			}
 			text.WriteString(taskContentPreview(m.data.Tasks[i].Content, m.width-6))
 		}
 	}
 	if m.view == bankTasks && m.cursor >= 0 && m.cursor < len(m.data.Tasks) {
 		text.WriteString("\n\n" + m.taskMetadata(m.data.Tasks[m.cursor]))
 	}
+	text.WriteString(m.packNotice())
 	return text.String()
 }
 
 func (m taskBankModel) ShortHelp() string {
+	if m.exporting {
+		return ""
+	}
 	if m.attachments != nil {
 		return m.attachments.ShortHelp()
 	}
@@ -504,13 +608,16 @@ func (m taskBankModel) ShortHelp() string {
 		return m.nameForm.ShortHelp()
 	}
 	if m.detail != nil {
-		return shortHelp(m.keys.Edit, m.keys.Attachments, m.keys.Back, m.keys.Help)
+		return shortHelp(m.keys.Edit, m.keys.Attachments, m.keys.Mark, m.keys.Export, m.keys.Back, m.keys.Help)
 	}
 	if m.view == bankCollections {
 		return shortHelp(m.keys.Create, m.keys.Rename, m.keys.Open, m.keys.Back, m.keys.Help)
 	}
 	if m.view != bankTasks {
 		return shortHelp(m.keys.Open, m.keys.Back, m.keys.Help)
+	}
+	if m.keys.Export.Enabled() {
+		return shortHelp(m.keys.Open, m.keys.Create, m.keys.Mark, m.keys.Export, m.keys.Back, m.keys.Help)
 	}
 	return shortHelp(m.keys.Open, m.keys.Create, m.keys.Edit, m.keys.Attachments, m.keys.Collections, m.keys.Back, m.keys.Help)
 }
@@ -522,11 +629,11 @@ func (m taskBankModel) FullHelp() (string, []shortcut) {
 	keys := m.keys
 	bindings := []shortcut{keys.helpBinding()}
 	if m.detail != nil {
-		bindings = append(bindings, keys.Edit, keys.Attachments)
+		bindings = append(bindings, keys.Edit, keys.Attachments, keys.Mark, keys.Export)
 	} else if m.view == bankCollections {
 		bindings = append(bindings, keys.Create, keys.Rename, keys.Open, keys.Clear)
 	} else if m.view == bankTasks {
-		bindings = append(bindings, keys.Open, keys.Create, keys.Edit, keys.Attachments, keys.Subjects, keys.Topics, keys.Collections, keys.Clear)
+		bindings = append(bindings, keys.Open, keys.Create, keys.Edit, keys.Attachments, keys.Mark, keys.Export, keys.Subjects, keys.Topics, keys.Collections, keys.Clear)
 	} else {
 		bindings = append(bindings, keys.Open, keys.Clear)
 	}

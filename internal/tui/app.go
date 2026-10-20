@@ -135,6 +135,8 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			a.taskBankSeq++
 			model := taskBankModel{ctx: a.students.ctx, service: a.taskBankService, screenID: a.taskBankSeq, width: a.width, height: max(1, a.height-8), keys: newTaskBankKeyMap()}
 			model.keys.Attachments.SetEnabled(a.taskBankService.AttachmentsEnabled())
+			model.keys.Mark.SetEnabled(a.taskBankService.TaskPackExportEnabled())
+			model.keys.Export.SetEnabled(a.taskBankService.TaskPackExportEnabled())
 			model, cmd := model.reload()
 			a.taskBank = &model
 			return a, cmd
