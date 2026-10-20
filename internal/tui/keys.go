@@ -172,6 +172,7 @@ type homeworkKeyMap struct {
 	globalKeyMap
 	Create, Open, Rename, EditTask, Toggle, Back shortcut
 	Attachments                                  shortcut
+	Bank, AssignBank                             shortcut
 }
 
 func newHomeworkKeyMap() homeworkKeyMap {
@@ -182,6 +183,8 @@ func newHomeworkKeyMap() homeworkKeyMap {
 		EditTask:    newShortcut("e", "задача", "Редактировать текст, темы и сложность задачи", "e"),
 		Toggle:      newShortcut("Space", "выполнение", "Отметить / снять выполнение выбранной задачи", "space"),
 		Attachments: newShortcut("a", "вложения", "Вложения выбранной задачи", "a"),
+		Bank:        newShortcut("B", "из банка", "Выбрать задачу банка и добавить независимую копию в это ДЗ", "B"),
+		AssignBank:  newShortcut("a", "в ДЗ", "Добавить выбранную задачу с вложениями как независимую копию", "a"),
 		Back:        newShortcut("Esc", "назад", "Вернуться к списку домашних заданий / карточке ученика", "esc"),
 	}
 }

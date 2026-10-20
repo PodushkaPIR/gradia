@@ -39,6 +39,7 @@ type studentsModel struct {
 	templateService *app.TemplateService
 	reportService   *app.ReportService
 	homeworkService *app.HomeworkService
+	taskBankService *app.TaskBankService
 	details         *studentDetailsModel
 	detailsSeq      uint64
 }
@@ -164,6 +165,7 @@ func (m studentsModel) Update(msg tea.Msg) (studentsModel, tea.Cmd) {
 				details := studentDetailsModel{ctx: m.ctx, routesService: m.routeService, templatesService: m.templateService, student: student, screenID: m.detailsSeq, height: max(1, m.height-4), width: m.width, keys: newStudentDetailsKeyMap()}
 				details.reportService = m.reportService
 				details.homeworkService = m.homeworkService
+				details.taskBankService = m.taskBankService
 				details.keys.Homework.SetEnabled(m.homeworkService != nil)
 				details.keys.Report.SetEnabled(m.reportService != nil)
 				details.keys.PDFReport.SetEnabled(m.reportService != nil && m.reportService.PDFExportEnabled())

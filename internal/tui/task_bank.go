@@ -66,6 +66,8 @@ type taskBankModel struct {
 	packErr                           error
 	importForm                        *nameForm
 	importResult                      *app.TaskPackImportResult
+	readOnly                          bool
+	wrap                              func(tea.Msg) tea.Msg
 }
 
 func (m taskBankModel) reload() (taskBankModel, tea.Cmd) {
@@ -74,14 +76,21 @@ func (m taskBankModel) reload() (taskBankModel, tea.Cmd) {
 	}
 	m.loading, m.err = true, nil
 	m.loadSeq++
-	ctx, service, filter, screen, seq := m.ctx, m.service, m.filter, m.screenID, m.loadSeq
+	ctx, service, filter, route, seq := m.ctx, m.service, m.filter, m.route, m.loadSeq
 	return m, func() tea.Msg {
 		page, err := service.Browse(ctx, filter)
 		if err != nil {
-			return routeToTaskBank(screen, taskBankLoadFailedMsg{err: err, seq: seq})
+			return route(taskBankLoadFailedMsg{err: err, seq: seq})
 		}
-		return routeToTaskBank(screen, taskBankLoadedMsg{page: page, seq: seq})
+		return route(taskBankLoadedMsg{page: page, seq: seq})
 	}
+}
+
+func (m taskBankModel) route(msg tea.Msg) tea.Msg {
+	if m.wrap != nil {
+		return m.wrap(msg)
+	}
+	return routeToTaskBank(m.screenID, msg)
 }
 
 func (m taskBankModel) Update(msg tea.Msg) (taskBankModel, tea.Cmd) {
@@ -464,6 +473,19 @@ func (m taskBankModel) listLength() int {
 	}
 }
 
+func (m taskBankModel) selectedTaskID() (domain.TaskBankTaskID, bool) {
+	if m.loading || m.err != nil || m.view != bankTasks {
+		return 0, false
+	}
+	if m.detail != nil {
+		return m.detail.ID, true
+	}
+	if m.cursor >= 0 && m.cursor < len(m.data.Tasks) {
+		return m.data.Tasks[m.cursor].ID, true
+	}
+	return 0, false
+}
+
 func (m taskBankModel) atRoot() bool {
 	return m.view == bankTasks && m.detail == nil && m.taskForm == nil && m.nameForm == nil && m.attachments == nil && m.importForm == nil
 }
@@ -538,6 +560,9 @@ func (m taskBankModel) detailHeight() int {
 
 func (m taskBankModel) View() string {
 	title := "Банк задач\n\n"
+	if m.readOnly {
+		title = "Выбор задачи из банка\n\n"
+	}
 	if len(m.marked) > 0 {
 		title = fmt.Sprintf("Банк задач\nОтмечено: %d (во всех фильтрах)\n\n", len(m.marked))
 	}
@@ -590,6 +615,9 @@ func (m taskBankModel) View() string {
 		text.WriteString("Коллекции\n\n")
 	}
 	if m.listLength() == 0 {
+		if m.readOnly {
+			return text.String() + "Пока пусто. Измените фильтры или вернитесь клавишей Esc."
+		}
 		if m.view == bankSubjects || m.view == bankTopics {
 			text.WriteString("Предметы и темы появляются после создания задач. Esc — вернуться к задачам.")
 			return text.String()

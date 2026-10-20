@@ -161,28 +161,35 @@ func (s *Store) SetHomeworkTaskCompleted(ctx context.Context, student domain.Stu
 	if err != nil {
 		return domain.HomeworkTask{}, err
 	}
+	if err := readHomeworkTaskTopics(ctx, tx, &task); err != nil {
+		return domain.HomeworkTask{}, err
+	}
+	if err := tx.Commit(); err != nil {
+		return domain.HomeworkTask{}, err
+	}
+	return task, nil
+}
+
+func readHomeworkTaskTopics(ctx context.Context, tx *sql.Tx, task *domain.HomeworkTask) error {
 	rows, err := tx.QueryContext(ctx, `SELECT topic_name FROM homework_task_topics WHERE task_id = ? ORDER BY position`, task.ID)
 	if err != nil {
-		return domain.HomeworkTask{}, err
+		return err
 	}
 	for rows.Next() {
 		var name string
 		if err := rows.Scan(&name); err != nil {
 			rows.Close()
-			return domain.HomeworkTask{}, err
+			return err
 		}
 		task.Topics = append(task.Topics, name)
 	}
 	err = rows.Err()
 	closeErr := rows.Close()
 	if err != nil {
-		return domain.HomeworkTask{}, err
+		return err
 	}
 	if closeErr != nil {
-		return domain.HomeworkTask{}, closeErr
+		return closeErr
 	}
-	if err := tx.Commit(); err != nil {
-		return domain.HomeworkTask{}, err
-	}
-	return task, nil
+	return nil
 }

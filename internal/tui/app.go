@@ -33,6 +33,7 @@ func NewApp(ctx context.Context, students *app.StudentService, templates *app.Te
 
 func (a App) WithTaskBank(service *app.TaskBankService) App {
 	a.taskBankService = service
+	a.students.taskBankService = service
 	a.keys.TaskBank.SetEnabled(service != nil)
 	a.students.keys.TaskBank.SetEnabled(service != nil)
 	return a

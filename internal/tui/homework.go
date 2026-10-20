@@ -51,6 +51,10 @@ type homeworkModel struct {
 	keys                              homeworkKeyMap
 	attachments                       *taskAttachmentsModel
 	attachmentSeq                     uint64
+	bankService                       *app.TaskBankService
+	bankPicker                        *taskBankModel
+	bankPickerSeq                     uint64
+	bankCopyErr                       error
 }
 
 func (m homeworkModel) reload() (homeworkModel, tea.Cmd) {
@@ -104,6 +108,11 @@ func (m homeworkModel) syncSummary() homeworkModel {
 
 func (m homeworkModel) Update(msg tea.Msg) (homeworkModel, tea.Cmd) {
 	switch msg := msg.(type) {
+	case homeworkBankMsg:
+		if m.bankPicker == nil || msg.screenID != m.bankPickerSeq {
+			return m, nil
+		}
+		return m.updateBankReply(msg.payload)
 	case homeworkAttachmentsMsg:
 		if m.attachments == nil || m.attachments.screenID != msg.screenID {
 			return m, nil
@@ -181,6 +190,9 @@ func (m homeworkModel) Update(msg tea.Msg) (homeworkModel, tea.Cmd) {
 		return m, nil
 	case tea.WindowSizeMsg:
 		m.width, m.height = msg.Width, max(1, msg.Height-14)
+	}
+	if m.bankPicker != nil {
+		return m.updateBankPicker(msg)
 	}
 	if m.attachments != nil {
 		if pressed, ok := msg.(tea.KeyPressMsg); ok && key.Matches(pressed, m.attachments.keys.Back.Binding) && m.attachments.form == nil && m.attachments.InputMode() == inputNavigation {
@@ -263,6 +275,10 @@ func (m homeworkModel) Update(msg tea.Msg) (homeworkModel, tea.Cmd) {
 			return m, nil
 		}
 		switch {
+		case key.Matches(pressed, m.keys.Bank.Binding):
+			if m.selected != nil && m.bankService != nil {
+				return m.openBankPicker()
+			}
 		case key.Matches(pressed, m.keys.Attachments.Binding):
 			if m.service.AttachmentsEnabled() && m.selected != nil && m.cursor >= 0 && m.cursor < len(m.tasks) {
 				m.attachmentSeq++
@@ -350,9 +366,15 @@ func (m homeworkModel) listLength() int {
 	return len(m.homeworks)
 }
 func (m homeworkModel) atRoot() bool {
-	return m.selected == nil && m.nameForm == nil && m.taskForm == nil && m.attachments == nil
+	return m.selected == nil && m.nameForm == nil && m.taskForm == nil && m.attachments == nil && m.bankPicker == nil
 }
 func (m homeworkModel) InputMode() inputMode {
+	if m.bankPicker != nil {
+		if m.saving {
+			return inputBusy
+		}
+		return m.bankPicker.InputMode()
+	}
 	if m.attachments != nil {
 		return m.attachments.InputMode()
 	}
@@ -381,6 +403,16 @@ func (m homeworkModel) View() string {
 	title := "Домашние задания\n\n"
 	if m.selected != nil {
 		title = "Домашнее задание — " + m.selected.Name + "\n\n"
+	}
+	if m.bankPicker != nil {
+		if m.saving {
+			return title + "Копирование задачи и вложений…"
+		}
+		text := title + "a — добавить независимую копию с вложениями.\n\n" + m.bankPicker.View()
+		if m.bankCopyErr != nil {
+			text += "\n\n" + homeworkError(m.bankCopyErr, "Не удалось добавить задачу. Повторите a; r — обновить банк.")
+		}
+		return text
 	}
 	if m.attachments != nil {
 		return title + m.attachments.View()
@@ -449,6 +481,12 @@ func (m homeworkModel) View() string {
 }
 
 func (m homeworkModel) ShortHelp() string {
+	if m.bankPicker != nil {
+		if m.saving {
+			return ""
+		}
+		return shortHelp(m.keys.AssignBank) + " · " + m.bankPicker.ShortHelp()
+	}
 	if m.attachments != nil {
 		return m.attachments.ShortHelp()
 	}
@@ -462,12 +500,16 @@ func (m homeworkModel) ShortHelp() string {
 		return ""
 	}
 	if m.selected != nil {
-		return shortHelp(m.keys.Create, m.keys.EditTask, m.keys.Toggle, m.keys.Attachments, m.keys.Back, m.keys.Help)
+		return shortHelp(m.keys.Create, m.keys.Bank, m.keys.EditTask, m.keys.Toggle, m.keys.Attachments, m.keys.Back, m.keys.Help)
 	}
 	return shortHelp(m.keys.Open, m.keys.Create, m.keys.Rename, m.keys.Back, m.keys.Help)
 }
 
 func (m homeworkModel) FullHelp() (string, []shortcut) {
+	if m.bankPicker != nil {
+		title, bindings := m.bankPicker.FullHelp()
+		return title, append(bindings, m.keys.AssignBank)
+	}
 	if m.attachments != nil {
 		return m.attachments.FullHelp()
 	}
@@ -476,7 +518,7 @@ func (m homeworkModel) FullHelp() (string, []shortcut) {
 	if m.selected == nil {
 		bindings = append(bindings, keys.Open)
 	} else {
-		bindings = append(bindings, keys.EditTask, keys.Toggle, keys.Attachments)
+		bindings = append(bindings, keys.Bank, keys.EditTask, keys.Toggle, keys.Attachments)
 	}
 	return "Домашние задания", append(bindings, keys.Reload, keys.Back, keys.Help, keys.Quit)
 }

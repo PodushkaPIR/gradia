@@ -17,6 +17,7 @@ type HomeworkRepository interface {
 	ListHomeworkAttachments(context.Context, domain.StudentID, domain.HomeworkID, domain.HomeworkTaskID) ([]domain.HomeworkAttachment, error)
 	AddHomeworkAttachment(context.Context, domain.StudentID, domain.HomeworkID, domain.HomeworkAttachment, []byte) (domain.HomeworkAttachment, error)
 	GetHomeworkAttachment(context.Context, domain.StudentID, domain.HomeworkID, domain.HomeworkTaskID, domain.HomeworkAttachmentID) (domain.HomeworkAttachment, []byte, error)
+	SnapshotBankTaskToHomework(context.Context, domain.StudentID, domain.HomeworkID, domain.TaskBankTaskID, time.Time) (domain.HomeworkTask, error)
 }
 
 type HomeworkService struct {
@@ -67,6 +68,18 @@ func (s *HomeworkService) Tasks(ctx context.Context, student domain.StudentID, i
 
 func (s *HomeworkService) AddTask(ctx context.Context, student domain.StudentID, id domain.HomeworkID, input domain.HomeworkTaskInput) (domain.HomeworkTask, error) {
 	return s.saveTask(ctx, student, id, 0, input)
+}
+
+// AddFromBank copies the current task and original attachments atomically. The
+// assigned task has no live link to the bank and starts incomplete.
+func (s *HomeworkService) AddFromBank(ctx context.Context, student domain.StudentID, id domain.HomeworkID, source domain.TaskBankTaskID) (domain.HomeworkTask, error) {
+	if err := validateHomeworkIDs(student, id); err != nil {
+		return domain.HomeworkTask{}, err
+	}
+	if source <= 0 {
+		return domain.HomeworkTask{}, domain.ErrTaskBankTaskNotFound
+	}
+	return s.repo.SnapshotBankTaskToHomework(ctx, student, id, source, time.Now().UTC().Truncate(time.Millisecond))
 }
 
 func (s *HomeworkService) EditTask(ctx context.Context, student domain.StudentID, id domain.HomeworkID, task domain.HomeworkTaskID, input domain.HomeworkTaskInput) (domain.HomeworkTask, error) {
