@@ -40,8 +40,8 @@ func fullHelpLines(bindings []shortcut) []string {
 }
 
 type globalKeyMap struct {
-	Help, Quit, Templates shortcut
-	Interrupt             key.Binding
+	Help, Quit, Templates, TaskBank shortcut
+	Interrupt                       key.Binding
 }
 
 func newGlobalKeyMap() globalKeyMap {
@@ -49,6 +49,7 @@ func newGlobalKeyMap() globalKeyMap {
 		Help:      newShortcut("?", "помощь", "Помощь", "?"),
 		Quit:      newShortcut("q", "выход", "Выход", "q"),
 		Templates: newShortcut("p", "шаблоны", "Открыть шаблоны", "p"),
+		TaskBank:  newShortcut("b", "банк задач", "Открыть независимый банк задач", "b"),
 		Interrupt: key.NewBinding(key.WithKeys("ctrl+c")),
 	}
 }
@@ -185,7 +186,7 @@ func newHomeworkKeyMap() homeworkKeyMap {
 	}
 }
 
-type homeworkTaskFormKeyMap struct{ Save, Cancel, Next, Previous shortcut }
+type taskContentFormKeyMap struct{ Save, Cancel, Next, Previous shortcut }
 
 type attachmentsKeyMap struct {
 	listKeyMap
@@ -212,12 +213,32 @@ func newAttachmentFormKeyMap() attachmentFormKeyMap {
 	}
 }
 
-func newHomeworkTaskFormKeyMap() homeworkTaskFormKeyMap {
-	return homeworkTaskFormKeyMap{
+func newTaskContentFormKeyMap() taskContentFormKeyMap {
+	return taskContentFormKeyMap{
 		Save:     newShortcut("Ctrl+S", "сохранить", "Сохранить задачу", "ctrl+s"),
 		Cancel:   newShortcut("Esc", "отменить", "Отменить редактирование", "esc"),
 		Next:     newShortcut("Tab", "поле", "Следующее поле", "tab"),
 		Previous: newShortcut("Shift+Tab", "назад", "Предыдущее поле", "shift+tab"),
+	}
+}
+
+type taskBankKeyMap struct {
+	listKeyMap
+	globalKeyMap
+	Create, Edit, Open, Subjects, Topics, Collections, Rename, Clear, Back shortcut
+}
+
+func newTaskBankKeyMap() taskBankKeyMap {
+	return taskBankKeyMap{listKeyMap: newListKeyMap(), globalKeyMap: newGlobalKeyMap(),
+		Create:      newShortcut("n", "создать", "Создать задачу / коллекцию", "n"),
+		Edit:        newShortcut("e", "редактировать", "Редактировать выбранную задачу банка", "e"),
+		Open:        newShortcut("Enter", "открыть", "Открыть задачу / применить выбранный фильтр", "enter"),
+		Subjects:    newShortcut("s", "предмет", "Выбрать предмет (фильтр)", "s"),
+		Topics:      newShortcut("t", "тема", "Выбрать тему в текущем предмете (фильтр)", "t"),
+		Collections: newShortcut("c", "коллекции", "Коллекции: создать, переименовать, выбрать фильтр", "c"),
+		Rename:      newShortcut("t", "переименовать", "Переименовать выбранную коллекцию", "t"),
+		Clear:       newShortcut("x", "все задачи", "Сбросить фильтры предмета, темы и коллекции", "x"),
+		Back:        newShortcut("Esc", "назад", "Закрыть просмотр / вернуться к задачам / выйти из банка", "esc"),
 	}
 }
 

@@ -1,10 +1,7 @@
 package tui
 
 import (
-	"encoding/csv"
 	"errors"
-	"io"
-	"strings"
 
 	"charm.land/bubbles/v2/key"
 	"charm.land/bubbles/v2/textarea"
@@ -12,15 +9,13 @@ import (
 	"github.com/shesh/gradia/internal/domain"
 )
 
-var errHomeworkTopicFormat = errors.New("укажите темы через ;, а название с ; или кавычками заключите в двойные кавычки")
-
 type homeworkTaskForm struct {
 	content           textarea.Model
 	topics            textarea.Model
 	focus, difficulty int
 	saving            bool
 	err               string
-	keys              homeworkTaskFormKeyMap
+	keys              taskContentFormKeyMap
 }
 
 func newHomeworkTaskForm(input domain.HomeworkTaskInput, width, height int) homeworkTaskForm {
@@ -31,12 +26,7 @@ func newHomeworkTaskForm(input domain.HomeworkTaskInput, width, height int) home
 	topics := textarea.New()
 	topics.Prompt, topics.ShowLineNumbers = "", false
 	topics.Placeholder, topics.CharLimit = "Например: Циклы; Функции", 0
-	var labels strings.Builder
-	writer := csv.NewWriter(&labels)
-	writer.Comma = ';'
-	_ = writer.Write(input.Topics)
-	writer.Flush()
-	topics.SetValue(strings.TrimSuffix(labels.String(), "\n"))
+	topics.SetValue(formatTaskTopics(input.Topics))
 	difficulty := 0
 	if input.Difficulty == domain.DifficultyMedium {
 		difficulty = 1
@@ -44,7 +34,7 @@ func newHomeworkTaskForm(input domain.HomeworkTaskInput, width, height int) home
 	if input.Difficulty == domain.DifficultyHard {
 		difficulty = 2
 	}
-	m := homeworkTaskForm{content: content, topics: topics, difficulty: difficulty, keys: newHomeworkTaskFormKeyMap()}
+	m := homeworkTaskForm{content: content, topics: topics, difficulty: difficulty, keys: newTaskContentFormKeyMap()}
 	return m.resize(width, height)
 }
 
@@ -75,14 +65,9 @@ func (m homeworkTaskForm) difficultyValue() domain.TaskDifficulty {
 }
 
 func (m homeworkTaskForm) input() (domain.HomeworkTaskInput, error) {
-	reader := csv.NewReader(strings.NewReader(m.topics.Value()))
-	reader.Comma, reader.TrimLeadingSpace, reader.FieldsPerRecord = ';', true, -1
-	topics, err := reader.Read()
-	if err != nil && !errors.Is(err, io.EOF) {
-		return domain.HomeworkTaskInput{}, errHomeworkTopicFormat
-	}
-	if _, err := reader.Read(); !errors.Is(err, io.EOF) {
-		return domain.HomeworkTaskInput{}, errHomeworkTopicFormat
+	topics, err := parseTaskTopics(m.topics.Value())
+	if err != nil {
+		return domain.HomeworkTaskInput{}, err
 	}
 	return domain.HomeworkTaskInput{Content: m.content.Value(), Topics: topics, Difficulty: m.difficultyValue()}, nil
 }
@@ -144,7 +129,7 @@ func (m homeworkTaskForm) Update(msg tea.Msg) (homeworkTaskForm, formAction, tea
 
 func (m homeworkTaskForm) fail(err error) (homeworkTaskForm, tea.Cmd) {
 	m.saving, m.err = false, homeworkError(err, "Не удалось сохранить задачу. Повторите Ctrl+S.")
-	if errors.Is(err, errHomeworkTopicFormat) {
+	if errors.Is(err, errTaskTopicFormat) {
 		m.err = err.Error()
 	}
 	return m.focusField(m.focus)

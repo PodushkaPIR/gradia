@@ -425,18 +425,7 @@ func (m homeworkModel) View() string {
 			} else {
 				text.WriteString("[ ] ")
 			}
-			line := ""
-			for _, part := range strings.Split(task.Content, "\n") {
-				if strings.TrimSpace(part) != "" {
-					line = strings.TrimSpace(part)
-					break
-				}
-			}
-			runes := []rune(line)
-			if len(runes) > max(1, m.width-20) {
-				line = string(runes[:max(1, m.width-20)]) + "…"
-			}
-			text.WriteString(line)
+			text.WriteString(taskContentPreview(task.Content, m.width-20))
 		}
 	}
 	if m.selected != nil && m.cursor >= 0 && m.cursor < len(m.tasks) {

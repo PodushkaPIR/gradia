@@ -165,11 +165,7 @@ func (m homeworkAttachmentsModel) InputMode() inputMode {
 }
 
 func (m homeworkAttachmentsModel) View() string {
-	line := strings.SplitN(strings.TrimSpace(m.taskContent), "\n", 2)[0]
-	runes := []rune(line)
-	if len(runes) > max(1, m.width-10) {
-		line = string(runes[:max(1, m.width-10)]) + "…"
-	}
+	line := taskContentPreview(m.taskContent, m.width-10)
 	title := "Вложения задачи — " + line + "\n\n"
 	if m.form != nil {
 		return title + m.form.View()

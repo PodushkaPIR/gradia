@@ -20,6 +20,9 @@ func (a App) contextHelp() helpModel {
 	if a.showTemplates {
 		title, bindings = a.templates.FullHelp()
 	}
+	if a.taskBank != nil {
+		title, bindings = a.taskBank.FullHelp()
+	}
 	return helpModel{title: title, lines: fullHelpLines(bindings), height: max(1, a.height-6), keys: newHelpKeyMap()}
 }
 

@@ -290,7 +290,7 @@ func (m studentsModel) ShortHelp() string {
 	case inputText:
 		return m.form.ShortHelp()
 	}
-	return shortHelp(m.keys.Open, m.keys.Create, m.keys.Templates, m.keys.Help)
+	return shortHelp(m.keys.Open, m.keys.Create, m.keys.Templates, m.keys.TaskBank, m.keys.Help)
 }
 
 func (m studentsModel) FullHelp() (string, []shortcut) {
@@ -302,5 +302,5 @@ func (m studentsModel) FullHelp() (string, []shortcut) {
 		return "Удаление ученика", []shortcut{keys.Confirm, keys.Cancel, keys.Help}
 	}
 	keys := m.keys
-	return "Ученики", []shortcut{keys.helpBinding(), keys.Open, keys.Create, keys.Edit, keys.Delete, keys.Templates, keys.Reload, keys.Help, keys.Quit}
+	return "Ученики", []shortcut{keys.helpBinding(), keys.Open, keys.Create, keys.Edit, keys.Delete, keys.Templates, keys.TaskBank, keys.Reload, keys.Help, keys.Quit}
 }
