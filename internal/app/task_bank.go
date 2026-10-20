@@ -27,6 +27,7 @@ type TaskBankRepository interface {
 	AddBankAttachment(context.Context, domain.TaskBankAttachment, []byte) (domain.TaskBankAttachment, error)
 	GetBankAttachment(context.Context, domain.TaskBankTaskID, domain.TaskBankAttachmentID) (domain.TaskBankAttachment, []byte, error)
 	TaskPackSnapshot(context.Context, []domain.TaskBankTaskID) (TaskPackSource, error)
+	ImportTaskPack(context.Context, TaskPackData, time.Time) (TaskPackImportResult, error)
 }
 
 type TaskBankService struct {
@@ -34,6 +35,7 @@ type TaskBankService struct {
 	files      AttachmentFiles
 	openFile   func(context.Context, string) error
 	packWriter TaskPackWriter
+	packReader TaskPackReader
 }
 
 func NewTaskBankService(repo TaskBankRepository) *TaskBankService {

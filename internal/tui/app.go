@@ -137,6 +137,7 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			model.keys.Attachments.SetEnabled(a.taskBankService.AttachmentsEnabled())
 			model.keys.Mark.SetEnabled(a.taskBankService.TaskPackExportEnabled())
 			model.keys.Export.SetEnabled(a.taskBankService.TaskPackExportEnabled())
+			model.keys.Import.SetEnabled(a.taskBankService.TaskPackImportEnabled())
 			model, cmd := model.reload()
 			a.taskBank = &model
 			return a, cmd

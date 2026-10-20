@@ -40,15 +40,20 @@ func readAttachment(ctx context.Context, files AttachmentFiles, path, pages stri
 	if err != nil {
 		return domain.AttachmentFile{}, "", err
 	}
-	mediaType := http.DetectContentType(file.Data)
-	if len(file.Data) >= 4 && (bytes.Equal(file.Data[:4], []byte{'I', 'I', 42, 0}) || bytes.Equal(file.Data[:4], []byte{'M', 'M', 0, 42})) {
+	mediaType, err := validateAttachmentData(file.Data, pages)
+	return file, mediaType, err
+}
+
+func validateAttachmentData(data []byte, pages string) (string, error) {
+	mediaType := http.DetectContentType(data)
+	if len(data) >= 4 && (bytes.Equal(data[:4], []byte{'I', 'I', 42, 0}) || bytes.Equal(data[:4], []byte{'M', 'M', 0, 42})) {
 		mediaType = "image/tiff"
 	}
 	if mediaType != "application/pdf" && !strings.HasPrefix(mediaType, "image/") {
-		return domain.AttachmentFile{}, "", domain.ErrAttachmentType
+		return "", domain.ErrAttachmentType
 	}
 	if pages != "" && mediaType != "application/pdf" {
-		return domain.AttachmentFile{}, "", domain.ErrAttachmentPagesOnlyPDF
+		return "", domain.ErrAttachmentPagesOnlyPDF
 	}
-	return file, mediaType, nil
+	return mediaType, nil
 }

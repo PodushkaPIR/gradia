@@ -64,6 +64,8 @@ type taskBankModel struct {
 	exporting                         bool
 	packPath                          string
 	packErr                           error
+	importForm                        *nameForm
+	importResult                      *app.TaskPackImportResult
 }
 
 func (m taskBankModel) reload() (taskBankModel, tea.Cmd) {
@@ -84,6 +86,21 @@ func (m taskBankModel) reload() (taskBankModel, tea.Cmd) {
 
 func (m taskBankModel) Update(msg tea.Msg) (taskBankModel, tea.Cmd) {
 	switch msg := msg.(type) {
+	case taskPackImportedMsg:
+		if m.importForm == nil {
+			return m, nil
+		}
+		m.importForm, m.importResult = nil, &msg.result
+		m.packErr, m.packPath = nil, ""
+		m.filter, m.view, m.cursor, m.detail = domain.TaskBankFilter{}, bankTasks, 0, nil
+		return m.reload()
+	case taskPackImportFailedMsg:
+		if m.importForm == nil {
+			return m, nil
+		}
+		form, cmd := m.importForm.fail(msg.err, fmt.Sprintf("Не удалось импортировать Task Pack: %v. Повторите Enter.", msg.err))
+		m.importForm = &form
+		return m, cmd
 	case taskPackExportedMsg:
 		m.exporting, m.packPath, m.packErr = false, msg.path, nil
 		return m, nil
@@ -166,6 +183,9 @@ func (m taskBankModel) Update(msg tea.Msg) (taskBankModel, tea.Cmd) {
 	if m.exporting {
 		return m, nil
 	}
+	if m.importForm != nil {
+		return m.updatePackImport(msg)
+	}
 	if m.attachments != nil {
 		if pressed, ok := msg.(tea.KeyPressMsg); ok && key.Matches(pressed, m.attachments.keys.Back.Binding) && m.attachments.form == nil && m.attachments.InputMode() == inputNavigation {
 			m.attachments = nil
@@ -247,6 +267,12 @@ func (m taskBankModel) Update(msg tea.Msg) (taskBankModel, tea.Cmd) {
 		}
 		if m.loading || m.err != nil {
 			return m, nil
+		}
+		if key.Matches(pressed, m.keys.Import.Binding) && m.view == bankTasks && m.detail == nil {
+			form := newNameForm(nameFormConfig{Title: "Импорт Task Pack\nПри конфликте сохраняются локальные версии задач.", Label: "Путь к ZIP-файлу", Placeholder: "/path/to/task-pack.zip", Width: m.width})
+			cmd := form.Init()
+			m.importForm = &form
+			return m, cmd
 		}
 		if key.Matches(pressed, m.keys.Export.Binding) && (m.view == bankTasks || m.detail != nil) {
 			return m.exportPack()
@@ -355,6 +381,7 @@ func (m taskBankModel) toggleMark(id domain.TaskBankTaskID) taskBankModel {
 }
 
 func (m taskBankModel) exportPack() (taskBankModel, tea.Cmd) {
+	m.importResult = nil
 	if len(m.marked) == 0 {
 		m.packErr, m.packPath = app.ErrTaskPackSelectionRequired, ""
 		return m, nil
@@ -438,11 +465,14 @@ func (m taskBankModel) listLength() int {
 }
 
 func (m taskBankModel) atRoot() bool {
-	return m.view == bankTasks && m.detail == nil && m.taskForm == nil && m.nameForm == nil && m.attachments == nil
+	return m.view == bankTasks && m.detail == nil && m.taskForm == nil && m.nameForm == nil && m.attachments == nil && m.importForm == nil
 }
 func (m taskBankModel) InputMode() inputMode {
 	if m.exporting {
 		return inputBusy
+	}
+	if m.importForm != nil {
+		return m.importForm.InputMode()
 	}
 	if m.attachments != nil {
 		return m.attachments.InputMode()
@@ -482,6 +512,10 @@ func (m taskBankModel) detailLines() []string {
 }
 
 func (m taskBankModel) packNotice() string {
+	if m.importResult != nil {
+		result := m.importResult
+		return "\n\n" + ansi.Hardwrap(fmt.Sprintf("Импорт Task Pack: добавлено %d, дубликатов %d, конфликтов %d (локальные версии сохранены).", result.Imported, result.Duplicates, result.Conflicts), max(1, m.width), true)
+	}
 	if errors.Is(m.packErr, app.ErrTaskPackSelectionRequired) {
 		return "\n\nОтметьте задачи клавишей Space перед экспортом."
 	}
@@ -509,6 +543,12 @@ func (m taskBankModel) View() string {
 	}
 	if m.exporting {
 		return title + "Экспорт Task Pack…"
+	}
+	if m.importForm != nil {
+		if m.importForm.saving {
+			return title + "Импорт Task Pack…"
+		}
+		return title + m.importForm.View()
 	}
 	if m.attachments != nil {
 		return title + m.attachments.View()
@@ -598,6 +638,9 @@ func (m taskBankModel) ShortHelp() string {
 	if m.exporting {
 		return ""
 	}
+	if m.importForm != nil {
+		return m.importForm.ShortHelp()
+	}
 	if m.attachments != nil {
 		return m.attachments.ShortHelp()
 	}
@@ -617,9 +660,9 @@ func (m taskBankModel) ShortHelp() string {
 		return shortHelp(m.keys.Open, m.keys.Back, m.keys.Help)
 	}
 	if m.keys.Export.Enabled() {
-		return shortHelp(m.keys.Open, m.keys.Create, m.keys.Mark, m.keys.Export, m.keys.Back, m.keys.Help)
+		return shortHelp(m.keys.Open, m.keys.Create, m.keys.Mark, m.keys.Export, m.keys.Import, m.keys.Back, m.keys.Help)
 	}
-	return shortHelp(m.keys.Open, m.keys.Create, m.keys.Edit, m.keys.Attachments, m.keys.Collections, m.keys.Back, m.keys.Help)
+	return shortHelp(m.keys.Open, m.keys.Create, m.keys.Edit, m.keys.Attachments, m.keys.Collections, m.keys.Import, m.keys.Back, m.keys.Help)
 }
 
 func (m taskBankModel) FullHelp() (string, []shortcut) {
@@ -633,7 +676,7 @@ func (m taskBankModel) FullHelp() (string, []shortcut) {
 	} else if m.view == bankCollections {
 		bindings = append(bindings, keys.Create, keys.Rename, keys.Open, keys.Clear)
 	} else if m.view == bankTasks {
-		bindings = append(bindings, keys.Open, keys.Create, keys.Edit, keys.Attachments, keys.Mark, keys.Export, keys.Subjects, keys.Topics, keys.Collections, keys.Clear)
+		bindings = append(bindings, keys.Open, keys.Create, keys.Edit, keys.Attachments, keys.Mark, keys.Export, keys.Import, keys.Subjects, keys.Topics, keys.Collections, keys.Clear)
 	} else {
 		bindings = append(bindings, keys.Open, keys.Clear)
 	}

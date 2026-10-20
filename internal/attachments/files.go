@@ -8,9 +8,11 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"unicode"
 
 	"github.com/shesh/gradia/internal/app"
 	"github.com/shesh/gradia/internal/domain"
+	"github.com/shesh/gradia/internal/localfiles"
 )
 
 type LocalFiles struct{ directory string }
@@ -59,7 +61,7 @@ func readRegularAttachment(ctx context.Context, path string) (domain.AttachmentF
 	if err := ctx.Err(); err != nil {
 		return domain.AttachmentFile{}, err
 	}
-	file, err := openAttachmentSource(path)
+	file, err := localfiles.OpenSource(path)
 	if err != nil {
 		return domain.AttachmentFile{}, err
 	}
@@ -93,10 +95,10 @@ func (f *LocalFiles) Write(ctx context.Context, file domain.AttachmentFile) (pat
 	if err := ctx.Err(); err != nil {
 		return "", err
 	}
-	name := filepath.Base(file.Name)
-	if name == "." || name == ".." || name == string(filepath.Separator) || name == "" {
+	if file.Name == "." || file.Name == ".." || file.Name == string(filepath.Separator) || file.Name == "" {
 		return "", errors.New("некорректное имя вложения")
 	}
+	name := materializedName(file.Name)
 	root, err := filepath.Abs(f.directory)
 	if err != nil {
 		return "", err
@@ -121,4 +123,31 @@ func (f *LocalFiles) Write(ctx context.Context, file domain.AttachmentFile) (pat
 		return "", err
 	}
 	return path, nil
+}
+
+// Original names stay in metadata. A viewer copy must be a single safe filename
+// on every supported OS, including names originating on another platform.
+func materializedName(original string) string {
+	name := strings.Map(func(r rune) rune {
+		if unicode.IsControl(r) || strings.ContainsRune(`<>:"/\|?*`, r) {
+			return '_'
+		}
+		return r
+	}, original)
+	name = strings.TrimRight(name, " .")
+	if name == "" {
+		return "attachment"
+	}
+	stem := strings.ToUpper(strings.TrimRight(strings.SplitN(name, ".", 2)[0], " "))
+	reserved := stem == "CON" || stem == "PRN" || stem == "AUX" || stem == "NUL"
+	if strings.HasPrefix(stem, "COM") || strings.HasPrefix(stem, "LPT") {
+		switch stem[3:] {
+		case "1", "2", "3", "4", "5", "6", "7", "8", "9", "¹", "²", "³":
+			reserved = true
+		}
+	}
+	if reserved {
+		name = "_" + name[1:]
+	}
+	return name
 }
