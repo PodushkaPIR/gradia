@@ -27,7 +27,7 @@ func TestImageTaskPersistsOriginalAndSupportsHomeworkAndTaskPacks(t *testing.T) 
 	}
 	t.Cleanup(func() { store.Close() })
 	files := attachments.NewLocalFiles(filepath.Join(dir, "exports"))
-	bank := app.NewTaskBankService(store).WithAttachments(files, nil).WithTaskPackWriter(taskpacks.NewZIPWriter(dir))
+	bank := app.NewTaskBankService(store).WithAttachments(files, nil).WithPackWriter(taskpacks.NewZIPWriter(dir))
 	collection, err := bank.CreateCollection(ctx, "Уравнения")
 	if err != nil {
 		t.Fatal(err)
@@ -91,7 +91,7 @@ func TestImageTaskPersistsOriginalAndSupportsHomeworkAndTaskPacks(t *testing.T) 
 		t.Fatal(err)
 	}
 	defer other.Close()
-	imported := app.NewTaskBankService(other).WithTaskPackReader(taskpacks.NewZIPReader())
+	imported := app.NewTaskBankService(other).WithPackReader(taskpacks.NewZIPReader())
 	if result, err := imported.ImportPack(ctx, packPath); err != nil || result.Imported != 1 {
 		t.Fatalf("image pack import: %+v %v", result, err)
 	}

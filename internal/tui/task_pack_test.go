@@ -44,7 +44,7 @@ func TestTutorImportsPackThroughPathFormAndCanRetryWithoutLeavingBank(t *testing
 	}
 	defer store.Close()
 	reader := &packReaderStub{err: app.ErrInvalidTaskPack}
-	bank := app.NewTaskBankService(store).WithTaskPackReader(reader)
+	bank := app.NewTaskBankService(store).WithPackReader(reader)
 	model := NewApp(ctx, app.NewStudentService(store), nil, nil).WithTaskBank(bank)
 	model, _ = updateApp(model, model.Init()())
 	model, load := updateApp(model, keypress('b'))
@@ -112,7 +112,7 @@ func TestTutorExportsMarkedTasksAcrossFiltersAndRetriesWithoutLosingSelection(t 
 	}
 	defer store.Close()
 	writer := &packWriterStub{err: errors.New("disk unavailable")}
-	bank := app.NewTaskBankService(store).WithTaskPackWriter(writer)
+	bank := app.NewTaskBankService(store).WithPackWriter(writer)
 	for _, item := range []struct{ content, subject string }{{"Задача А", "Информатика"}, {"Задача Б", "Математика"}} {
 		if _, err := bank.Create(ctx, domain.TaskBankInput{Content: item.content, Subject: item.subject, Topics: []string{"Тема"}, Difficulty: domain.DifficultyEasy}); err != nil {
 			t.Fatal(err)

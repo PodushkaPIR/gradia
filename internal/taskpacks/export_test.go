@@ -62,7 +62,7 @@ func TestTaskPackExportsOnlySelectedTasksMetadataAndOriginalAssets(t *testing.T)
 		t.Fatal(err)
 	}
 	defer store.Close()
-	bank := app.NewTaskBankService(store).WithAttachments(attachments.NewLocalFiles(filepath.Join(dir, "copies")), nil).WithTaskPackWriter(taskpacks.NewZIPWriter(filepath.Join(dir, "packs")))
+	bank := app.NewTaskBankService(store).WithAttachments(attachments.NewLocalFiles(filepath.Join(dir, "copies")), nil).WithPackWriter(taskpacks.NewZIPWriter(filepath.Join(dir, "packs")))
 	exam, err := bank.CreateCollection(ctx, "Экзамен")
 	if err != nil {
 		t.Fatal(err)
@@ -182,7 +182,7 @@ func TestTaskPackExportsOnlySelectedTasksMetadataAndOriginalAssets(t *testing.T)
 		t.Fatal(err)
 	}
 	defer reopened.Close()
-	bank = app.NewTaskBankService(reopened).WithTaskPackWriter(taskpacks.NewZIPWriter(filepath.Join(dir, "packs")))
+	bank = app.NewTaskBankService(reopened).WithPackWriter(taskpacks.NewZIPWriter(filepath.Join(dir, "packs")))
 	afterRestart, err := bank.ExportPack(ctx, []domain.TaskBankTaskID{first.ID, second.ID})
 	if err != nil {
 		t.Fatal(err)
@@ -230,7 +230,7 @@ func TestTaskPackFailuresDoNotPublishPartialZIPOrOverwriteEarlierPack(t *testing
 	defer store.Close()
 	repo := &packReadTestStore{Store: store}
 	packs := filepath.Join(dir, "packs")
-	bank := app.NewTaskBankService(repo).WithAttachments(attachments.NewLocalFiles(filepath.Join(dir, "copies")), nil).WithTaskPackWriter(taskpacks.NewZIPWriter(packs))
+	bank := app.NewTaskBankService(repo).WithAttachments(attachments.NewLocalFiles(filepath.Join(dir, "copies")), nil).WithPackWriter(taskpacks.NewZIPWriter(packs))
 	task, err := bank.Create(ctx, domain.TaskBankInput{Content: "Задача", Subject: "Информатика", Topics: []string{"Циклы"}, Difficulty: domain.DifficultyEasy})
 	if err != nil {
 		t.Fatal(err)
@@ -279,7 +279,7 @@ func TestTaskPackFailuresDoNotPublishPartialZIPOrOverwriteEarlierPack(t *testing
 	if err := os.WriteFile(blocked, []byte("preserve"), 0600); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := bank.WithTaskPackWriter(taskpacks.NewZIPWriter(blocked)).ExportPack(ctx, []domain.TaskBankTaskID{task.ID}); err == nil {
+	if _, err := bank.WithPackWriter(taskpacks.NewZIPWriter(blocked)).ExportPack(ctx, []domain.TaskBankTaskID{task.ID}); err == nil {
 		t.Fatal("expected destination failure")
 	}
 }

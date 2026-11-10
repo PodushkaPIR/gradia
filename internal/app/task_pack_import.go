@@ -27,13 +27,13 @@ type TaskPackReader interface {
 	Read(context.Context, string) (TaskPackData, error)
 }
 
-func (s *TaskBankService) WithTaskPackReader(reader TaskPackReader) *TaskBankService {
+func (s *TaskBankService) WithPackReader(reader TaskPackReader) *TaskBankService {
 	configured := *s
 	configured.packReader = reader
 	return &configured
 }
 
-func (s *TaskBankService) TaskPackImportEnabled() bool { return s.packReader != nil }
+func (s *TaskBankService) PackImportEnabled() bool { return s.packReader != nil }
 
 // ImportPack always keeps local tasks when their portable identities conflict.
 func (s *TaskBankService) ImportPack(ctx context.Context, path string) (TaskPackImportResult, error) {

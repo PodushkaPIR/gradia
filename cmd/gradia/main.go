@@ -50,8 +50,8 @@ func run() error {
 	attachmentFiles := attachments.NewLocalFiles(filepath.Join(filepath.Dir(path), "attachments"))
 	taskBank := app.NewTaskBankService(store).
 		WithAttachments(attachmentFiles, desktop.OpenFile).
-		WithTaskPackWriter(taskpacks.NewZIPWriter(filepath.Join(filepath.Dir(path), "task-packs"))).
-		WithTaskPackReader(taskpacks.NewZIPReader())
+		WithPackWriter(taskpacks.NewZIPWriter(filepath.Join(filepath.Dir(path), "task-packs"))).
+		WithPackReader(taskpacks.NewZIPReader())
 	homework := app.NewHomeworkService(store).WithAttachments(attachmentFiles, desktop.OpenFile)
 	reportService := app.NewReportService(
 		students,

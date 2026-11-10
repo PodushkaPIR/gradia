@@ -21,7 +21,7 @@ type TaskBankRepository interface {
 	ListBankTasks(context.Context, domain.TaskBankFilter) ([]domain.TaskBankTask, error)
 	BankTaskCatalog(context.Context, string) (TaskBankCatalog, error)
 	SaveBankTask(context.Context, domain.TaskBankTaskID, domain.TaskBankInput, time.Time) (domain.TaskBankTask, error)
-	CreateBankTaskWithImage(context.Context, domain.TaskBankInput, domain.AttachmentFile, string, time.Time) (domain.TaskBankTask, error)
+	CreateBankImageTask(context.Context, domain.TaskBankInput, domain.AttachmentFile, string, time.Time) (domain.TaskBankTask, error)
 	CreateTaskCollection(context.Context, string, time.Time) (domain.TaskCollection, error)
 	RenameTaskCollection(context.Context, domain.TaskCollectionID, string, time.Time) (domain.TaskCollection, error)
 	ListBankAttachments(context.Context, domain.TaskBankTaskID) ([]domain.TaskBankAttachment, error)

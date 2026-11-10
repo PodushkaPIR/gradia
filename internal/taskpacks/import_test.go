@@ -35,7 +35,7 @@ func TestTaskPackImportPreservesUnusualOriginalNamesWhenMaterializingFiles(t *te
 		t.Fatal(err)
 	}
 	defer store.Close()
-	bank := app.NewTaskBankService(store).WithAttachments(attachments.NewLocalFiles(dir), nil).WithTaskPackReader(taskpacks.NewZIPReader()).WithTaskPackWriter(taskpacks.NewZIPWriter(dir))
+	bank := app.NewTaskBankService(store).WithAttachments(attachments.NewLocalFiles(dir), nil).WithPackReader(taskpacks.NewZIPReader()).WithPackWriter(taskpacks.NewZIPWriter(dir))
 	task, err := bank.Create(ctx, domain.TaskBankInput{Content: "Задача", Subject: "Информатика", Topics: []string{"Циклы"}, Difficulty: domain.DifficultyEasy})
 	if err != nil {
 		t.Fatal(err)
@@ -63,7 +63,7 @@ func TestTaskPackImportPreservesUnusualOriginalNamesWhenMaterializingFiles(t *te
 		t.Fatal(err)
 	}
 	defer targetStore.Close()
-	target := app.NewTaskBankService(targetStore).WithTaskPackReader(taskpacks.NewZIPReader()).WithAttachments(attachments.NewLocalFiles(filepath.Join(dir, "copies")), nil)
+	target := app.NewTaskBankService(targetStore).WithPackReader(taskpacks.NewZIPReader()).WithAttachments(attachments.NewLocalFiles(filepath.Join(dir, "copies")), nil)
 	if _, err := target.ImportPack(ctx, pack); err != nil {
 		t.Fatal(err)
 	}
@@ -188,7 +188,7 @@ func TestTaskPackRejectsInvalidPacksWithoutImportingEarlierValidTasks(t *testing
 				t.Fatal(err)
 			}
 			defer store.Close()
-			bank := app.NewTaskBankService(store).WithTaskPackReader(taskpacks.NewZIPReader())
+			bank := app.NewTaskBankService(store).WithPackReader(taskpacks.NewZIPReader())
 			if result, err := bank.ImportPack(ctx, filename); !errors.Is(err, app.ErrInvalidTaskPack) || result != (app.TaskPackImportResult{}) {
 				t.Fatalf("bad pack accepted: %+v %v", result, err)
 			}
@@ -208,7 +208,7 @@ func TestTaskPackImportRoundTripSkipsDuplicatesAndKeepsLocalEdits(t *testing.T) 
 		t.Fatal(err)
 	}
 	defer sourceStore.Close()
-	source := app.NewTaskBankService(sourceStore).WithAttachments(attachments.NewLocalFiles(dir), nil).WithTaskPackWriter(taskpacks.NewZIPWriter(dir))
+	source := app.NewTaskBankService(sourceStore).WithAttachments(attachments.NewLocalFiles(dir), nil).WithPackWriter(taskpacks.NewZIPWriter(dir))
 	collection, err := source.CreateCollection(ctx, "Практика")
 	if err != nil {
 		t.Fatal(err)
@@ -247,7 +247,7 @@ func TestTaskPackImportRoundTripSkipsDuplicatesAndKeepsLocalEdits(t *testing.T) 
 		t.Fatal(err)
 	}
 	defer targetStore.Close()
-	target := app.NewTaskBankService(targetStore).WithTaskPackReader(taskpacks.NewZIPReader()).WithTaskPackWriter(taskpacks.NewZIPWriter(dir))
+	target := app.NewTaskBankService(targetStore).WithPackReader(taskpacks.NewZIPReader()).WithPackWriter(taskpacks.NewZIPWriter(dir))
 	// Existing local IDs and collection IDs must not be treated as portable identities.
 	if _, err := target.Create(ctx, domain.TaskBankInput{Content: "Локальная задача", Subject: "Математика", Topics: []string{"Дроби"}, Difficulty: domain.DifficultyEasy}); err != nil {
 		t.Fatal(err)
@@ -356,7 +356,7 @@ func TestTaskPackRejectsUnreadableTruncatedAndOversizedArchives(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer store.Close()
-	bank := app.NewTaskBankService(store).WithTaskPackReader(taskpacks.NewZIPReader())
+	bank := app.NewTaskBankService(store).WithPackReader(taskpacks.NewZIPReader())
 	if _, err := bank.ImportPack(ctx, ""); !errors.Is(err, app.ErrTaskPackPathRequired) {
 		t.Fatalf("empty path: %v", err)
 	}

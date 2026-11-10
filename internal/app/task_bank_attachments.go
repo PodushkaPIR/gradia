@@ -35,7 +35,7 @@ func (s *TaskBankService) CreateFromImage(ctx context.Context, input domain.Task
 	if !strings.HasPrefix(mediaType, "image/") {
 		return domain.TaskBankTask{}, ErrTaskImageRequired
 	}
-	return s.repo.CreateBankTaskWithImage(ctx, input, file, mediaType, time.Now().UTC().Truncate(time.Millisecond))
+	return s.repo.CreateBankImageTask(ctx, input, file, mediaType, time.Now().UTC().Truncate(time.Millisecond))
 }
 
 func (s *TaskBankService) Attachments(ctx context.Context, task domain.TaskBankTaskID) ([]domain.TaskBankAttachment, error) {

@@ -466,7 +466,7 @@ func (m taskBankModel) openTaskForm(task *domain.TaskBankTask, fromImage bool) (
 	form := newTaskBankForm(input, m.data.Collections, m.width, m.height)
 	field := taskFieldContent
 	if fromImage {
-		form = newImageTaskBankForm(input, m.data.Collections, m.width, m.height)
+		form = newBankImageForm(input, m.data.Collections, m.width, m.height)
 		field = taskFieldImagePath
 	}
 	form, cmd := form.focusField(field)

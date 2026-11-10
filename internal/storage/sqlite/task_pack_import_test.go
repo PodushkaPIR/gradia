@@ -64,7 +64,7 @@ func TestTaskPackImportRollsBackLateWriteFailureAndPreservesHomework(t *testing.
 		task.SHA256 = app.TaskPackFingerprint(task)
 		pack.Tasks = append(pack.Tasks, task)
 	}
-	bank := app.NewTaskBankService(store).WithTaskPackReader(importPackReader{pack})
+	bank := app.NewTaskBankService(store).WithPackReader(importPackReader{pack})
 	// Fail only after the first task and its attachment were inserted.
 	if _, err := store.db.ExecContext(ctx, `CREATE TRIGGER fail_import BEFORE INSERT ON task_bank_attachments WHEN NEW.name = 'b.pdf' BEGIN SELECT RAISE(ABORT, 'injected disk failure'); END;`); err != nil {
 		t.Fatal(err)

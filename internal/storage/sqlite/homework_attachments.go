@@ -11,7 +11,7 @@ import (
 
 const homeworkAttachmentColumns = `id, task_id, name, media_type, pages, length(content), created_at`
 
-func checkHomeworkAttachmentTask(ctx context.Context, query homeworkQuerier, student domain.StudentID, homework domain.HomeworkID, task domain.HomeworkTaskID) error {
+func checkHomeworkTask(ctx context.Context, query homeworkQuerier, student domain.StudentID, homework domain.HomeworkID, task domain.HomeworkTaskID) error {
 	if err := checkHomework(ctx, query, student, homework); err != nil {
 		return err
 	}
@@ -40,7 +40,7 @@ func scanHomeworkAttachment(row interface{ Scan(...any) error }, extra ...any) (
 }
 
 func (s *Store) ListHomeworkAttachments(ctx context.Context, student domain.StudentID, homework domain.HomeworkID, task domain.HomeworkTaskID) ([]domain.HomeworkAttachment, error) {
-	if err := checkHomeworkAttachmentTask(ctx, s.db, student, homework, task); err != nil {
+	if err := checkHomeworkTask(ctx, s.db, student, homework, task); err != nil {
 		return nil, err
 	}
 	rows, err := s.db.QueryContext(ctx, `SELECT `+homeworkAttachmentColumns+` FROM homework_attachments WHERE task_id = ? ORDER BY id`, task)
@@ -65,7 +65,7 @@ func (s *Store) AddHomeworkAttachment(ctx context.Context, student domain.Studen
 		return domain.HomeworkAttachment{}, err
 	}
 	defer tx.Rollback()
-	if err := checkHomeworkAttachmentTask(ctx, tx, student, homework, metadata.TaskID); err != nil {
+	if err := checkHomeworkTask(ctx, tx, student, homework, metadata.TaskID); err != nil {
 		return domain.HomeworkAttachment{}, err
 	}
 	item, err := scanHomeworkAttachment(tx.QueryRowContext(ctx, `INSERT INTO homework_attachments (task_id, name, media_type, pages, content, created_at) VALUES (?, ?, ?, ?, ?, ?) RETURNING `+homeworkAttachmentColumns, metadata.TaskID, metadata.Name, metadata.MediaType, metadata.Pages, data, metadata.CreatedAt.UnixMilli()))

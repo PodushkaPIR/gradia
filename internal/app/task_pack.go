@@ -23,13 +23,13 @@ type TaskPackWriter interface {
 	Write(context.Context, TaskPackSource, func(context.Context, domain.TaskBankAttachment) ([]byte, error)) (string, error)
 }
 
-func (s *TaskBankService) WithTaskPackWriter(writer TaskPackWriter) *TaskBankService {
+func (s *TaskBankService) WithPackWriter(writer TaskPackWriter) *TaskBankService {
 	configured := *s
 	configured.packWriter = writer
 	return &configured
 }
 
-func (s *TaskBankService) TaskPackExportEnabled() bool { return s.packWriter != nil }
+func (s *TaskBankService) PackExportEnabled() bool { return s.packWriter != nil }
 
 func (s *TaskBankService) ExportPack(ctx context.Context, selection []domain.TaskBankTaskID) (string, error) {
 	if len(selection) == 0 {

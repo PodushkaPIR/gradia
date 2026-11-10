@@ -65,7 +65,7 @@ func (s *Store) SaveBankTask(ctx context.Context, id domain.TaskBankTaskID, inpu
 	return s.saveBankTask(ctx, id, input, at, nil, "")
 }
 
-func (s *Store) CreateBankTaskWithImage(ctx context.Context, input domain.TaskBankInput, file domain.AttachmentFile, mediaType string, at time.Time) (domain.TaskBankTask, error) {
+func (s *Store) CreateBankImageTask(ctx context.Context, input domain.TaskBankInput, file domain.AttachmentFile, mediaType string, at time.Time) (domain.TaskBankTask, error) {
 	return s.saveBankTask(ctx, 0, input, at, &file, mediaType)
 }
 

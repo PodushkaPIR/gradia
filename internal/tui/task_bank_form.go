@@ -69,7 +69,7 @@ func newTaskBankForm(input domain.TaskBankInput, collections []domain.TaskCollec
 	return m.resize(width, height)
 }
 
-func newImageTaskBankForm(input domain.TaskBankInput, collections []domain.TaskCollection, width, height int) taskBankForm {
+func newBankImageForm(input domain.TaskBankInput, collections []domain.TaskCollection, width, height int) taskBankForm {
 	m := newTaskBankForm(input, collections, width, height)
 	path := textinput.New()
 	path.Placeholder = "Полный путь или ~/Downloads/задача.png"

@@ -57,7 +57,7 @@ func TestTaskPackIdentityMigrationPreservesLegacyBankAndStableKeys(t *testing.T)
 	}
 	defer store.Close()
 	writer := &identityPackWriter{}
-	bank := app.NewTaskBankService(store).WithTaskPackWriter(writer)
+	bank := app.NewTaskBankService(store).WithPackWriter(writer)
 	if _, err := bank.ExportPack(ctx, []domain.TaskBankTaskID{task.ID}); err != nil {
 		t.Fatal(err)
 	}
