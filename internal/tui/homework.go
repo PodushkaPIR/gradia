@@ -108,6 +108,8 @@ func (m homeworkModel) syncSummary() homeworkModel {
 
 func (m homeworkModel) Update(msg tea.Msg) (homeworkModel, tea.Cmd) {
 	switch msg := msg.(type) {
+	case homeworkTasksMovedMsg:
+		return m.applyTaskOrder(msg), nil
 	case homeworkBankMsg:
 		if m.bankPicker == nil || msg.screenID != m.bankPickerSeq {
 			return m, nil
@@ -275,6 +277,10 @@ func (m homeworkModel) Update(msg tea.Msg) (homeworkModel, tea.Cmd) {
 			return m, nil
 		}
 		switch {
+		case key.Matches(pressed, m.keys.MoveUp.Binding):
+			return m.moveTask(false)
+		case key.Matches(pressed, m.keys.MoveDown.Binding):
+			return m.moveTask(true)
 		case key.Matches(pressed, m.keys.Bank.Binding):
 			if m.selected != nil && m.bankService != nil {
 				return m.openBankPicker()
@@ -475,7 +481,7 @@ func (m homeworkModel) View() string {
 		text.WriteString("\n\nСохранение…")
 	}
 	if m.saveErr != nil {
-		text.WriteString("\n\nНе удалось сохранить выполнение задачи. Повторите Space.")
+		text.WriteString("\n\nНе удалось сохранить изменение. Повторите действие или r — обновить.")
 	}
 	return text.String()
 }
@@ -500,7 +506,8 @@ func (m homeworkModel) ShortHelp() string {
 		return ""
 	}
 	if m.selected != nil {
-		return shortHelp(m.keys.Create, m.keys.Bank, m.keys.EditTask, m.keys.Toggle, m.keys.Attachments, m.keys.Back, m.keys.Help)
+		return shortHelp(m.keys.Create, m.keys.Bank, m.keys.EditTask, m.keys.Toggle,
+			m.keys.MoveUp, m.keys.MoveDown, m.keys.Attachments, m.keys.Back, m.keys.Help)
 	}
 	return shortHelp(m.keys.Open, m.keys.Create, m.keys.Rename, m.keys.Back, m.keys.Help)
 }
@@ -518,7 +525,7 @@ func (m homeworkModel) FullHelp() (string, []shortcut) {
 	if m.selected == nil {
 		bindings = append(bindings, keys.Open)
 	} else {
-		bindings = append(bindings, keys.Bank, keys.EditTask, keys.Toggle, keys.Attachments)
+		bindings = append(bindings, keys.Bank, keys.EditTask, keys.Toggle, keys.MoveUp, keys.MoveDown, keys.Attachments)
 	}
 	return "Домашние задания", append(bindings, keys.Reload, keys.Back, keys.Help, keys.Quit)
 }

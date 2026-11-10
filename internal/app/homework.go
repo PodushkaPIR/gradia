@@ -18,6 +18,10 @@ type HomeworkRepository interface {
 	AddHomeworkAttachment(context.Context, domain.StudentID, domain.HomeworkID, domain.HomeworkAttachment, []byte) (domain.HomeworkAttachment, error)
 	GetHomeworkAttachment(context.Context, domain.StudentID, domain.HomeworkID, domain.HomeworkTaskID, domain.HomeworkAttachmentID) (domain.HomeworkAttachment, []byte, error)
 	SnapshotBankTasksToHomework(context.Context, domain.StudentID, domain.HomeworkID, []domain.TaskBankTaskID, time.Time) ([]domain.HomeworkTask, error)
+	SwapHomeworkTasks(
+		context.Context, domain.StudentID, domain.HomeworkID,
+		domain.HomeworkTaskID, domain.HomeworkTaskID, time.Time,
+	) ([]domain.HomeworkTaskPosition, error)
 }
 
 type HomeworkService struct {

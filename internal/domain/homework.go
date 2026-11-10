@@ -38,6 +38,11 @@ type HomeworkTask struct {
 	CreatedAt, UpdatedAt time.Time
 }
 
+type HomeworkTaskPosition struct {
+	TaskID   HomeworkTaskID
+	Position int
+}
+
 type HomeworkTaskInput = TaskContentInput
 
 func NormalizeHomeworkName(name string) (string, error) {

@@ -173,6 +173,7 @@ type homeworkKeyMap struct {
 	Create, Open, Rename, EditTask, Toggle, Back shortcut
 	Attachments                                  shortcut
 	Bank, AssignBank                             shortcut
+	MoveUp, MoveDown                             shortcut
 }
 
 func newHomeworkKeyMap() homeworkKeyMap {
@@ -185,6 +186,8 @@ func newHomeworkKeyMap() homeworkKeyMap {
 		Attachments: newShortcut("a", "вложения", "Вложения выбранной задачи", "a"),
 		Bank:        newShortcut("B", "из банка", "Выбрать задачи банка и добавить независимые копии в это ДЗ", "B"),
 		AssignBank:  newShortcut("a", "в ДЗ", "Добавить отмеченные задачи с вложениями в порядке выбора; без отметок — текущую", "a"),
+		MoveUp:      newShortcut("K / Alt+↑", "выше", "Переставить задачу выше, сохранив её выбранной", "K", "alt+up"),
+		MoveDown:    newShortcut("J / Alt+↓", "ниже", "Переставить задачу ниже, сохранив её выбранной", "J", "alt+down"),
 		Back:        newShortcut("Esc", "назад", "Вернуться к списку домашних заданий / карточке ученика", "esc"),
 	}
 }
