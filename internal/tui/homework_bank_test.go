@@ -21,12 +21,12 @@ type homeworkBankTestStore struct {
 	copyErr error
 }
 
-func (s *homeworkBankTestStore) SnapshotBankTaskToHomework(ctx context.Context, student domain.StudentID, id domain.HomeworkID, source domain.TaskBankTaskID, at time.Time) (domain.HomeworkTask, error) {
+func (s *homeworkBankTestStore) SnapshotBankTasksToHomework(ctx context.Context, student domain.StudentID, id domain.HomeworkID, sources []domain.TaskBankTaskID, at time.Time) ([]domain.HomeworkTask, error) {
 	s.copies++
 	if s.copyErr != nil {
-		return domain.HomeworkTask{}, s.copyErr
+		return nil, s.copyErr
 	}
-	return s.Store.SnapshotBankTaskToHomework(ctx, student, id, source, at)
+	return s.Store.SnapshotBankTasksToHomework(ctx, student, id, sources, at)
 }
 
 func TestHomeworkBankSelectionRetry(t *testing.T) {

@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"maps"
 	"slices"
 	"strings"
 
@@ -60,7 +59,7 @@ type taskBankModel struct {
 	keys                              taskBankKeyMap
 	attachments                       *taskAttachmentsModel
 	attachmentSeq                     uint64
-	marked                            map[domain.TaskBankTaskID]bool
+	marked                            []domain.TaskBankTaskID
 	exporting                         bool
 	packPath                          string
 	packErr                           error
@@ -389,14 +388,11 @@ func (m taskBankModel) chooseView(view bankView) taskBankModel {
 }
 
 func (m taskBankModel) toggleMark(id domain.TaskBankTaskID) taskBankModel {
-	m.marked = maps.Clone(m.marked)
-	if m.marked == nil {
-		m.marked = make(map[domain.TaskBankTaskID]bool)
-	}
-	if m.marked[id] {
-		delete(m.marked, id)
+	m.marked = slices.Clone(m.marked)
+	if index := slices.Index(m.marked, id); index >= 0 {
+		m.marked = slices.Delete(m.marked, index, index+1)
 	} else {
-		m.marked[id] = true
+		m.marked = append(m.marked, id)
 	}
 	if m.detail != nil {
 		m.detailOffset = max(0, min(m.detailOffset, len(m.detailLines())-m.detailHeight()))
@@ -410,10 +406,7 @@ func (m taskBankModel) exportPack() (taskBankModel, tea.Cmd) {
 		m.packErr, m.packPath = app.ErrTaskPackSelectionRequired, ""
 		return m, nil
 	}
-	var ids []domain.TaskBankTaskID
-	for id := range m.marked {
-		ids = append(ids, id)
-	}
+	ids := slices.Clone(m.marked)
 	m.exporting, m.packErr, m.packPath = true, nil, ""
 	ctx, service, screen := m.ctx, m.service, m.screenID
 	return m, func() tea.Msg {
@@ -609,13 +602,14 @@ func (m taskBankModel) detailHeight() int {
 }
 
 func (m taskBankModel) View() string {
-	title := "Банк задач\n\n"
+	title := "Банк задач"
 	if m.readOnly {
-		title = "Выбор задачи из банка\n\n"
+		title = "Выбор задач из банка"
 	}
 	if len(m.marked) > 0 {
-		title = fmt.Sprintf("Банк задач\nОтмечено: %d (во всех фильтрах)\n\n", len(m.marked))
+		title += fmt.Sprintf("\nОтмечено: %d (во всех фильтрах)", len(m.marked))
 	}
+	title += "\n\n"
 	if m.exporting {
 		return title + "Экспорт Task Pack…"
 	}
@@ -696,7 +690,7 @@ func (m taskBankModel) View() string {
 			fmt.Fprintf(&text, "%s — %d задач", item.Name, item.TaskCount)
 		default:
 			if m.keys.Mark.Enabled() {
-				if m.marked[m.data.Tasks[i].ID] {
+				if slices.Contains(m.marked, m.data.Tasks[i].ID) {
 					text.WriteString("[x] ")
 				} else {
 					text.WriteString("[ ] ")
@@ -736,6 +730,9 @@ func (m taskBankModel) ShortHelp() string {
 	}
 	if m.view != bankTasks {
 		return shortHelp(m.keys.Open, m.keys.Back, m.keys.Help)
+	}
+	if m.readOnly {
+		return shortHelp(m.keys.Open, m.keys.Mark, m.keys.Subjects, m.keys.Topics, m.keys.Collections, m.keys.Clear, m.keys.Back, m.keys.Help)
 	}
 	if m.keys.Export.Enabled() {
 		return shortHelp(m.keys.Open, m.keys.Create, m.keys.CreateImage, m.keys.Mark, m.keys.Export, m.keys.Import, m.keys.Back, m.keys.Help)

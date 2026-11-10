@@ -406,11 +406,11 @@ func (m homeworkModel) View() string {
 	}
 	if m.bankPicker != nil {
 		if m.saving {
-			return title + "Копирование задачи и вложений…"
+			return title + "Копирование задач и вложений…"
 		}
-		text := title + "a — добавить независимую копию с вложениями.\n\n" + m.bankPicker.View()
+		text := title + "a — добавить в порядке выбора (без отметок — текущую задачу).\n\n" + m.bankPicker.View()
 		if m.bankCopyErr != nil {
-			text += "\n\n" + homeworkError(m.bankCopyErr, "Не удалось добавить задачу. Повторите a; r — обновить банк.")
+			text += "\n\n" + homeworkError(m.bankCopyErr, "Не удалось добавить задачи. Повторите a; r — обновить банк.")
 		}
 		return text
 	}
