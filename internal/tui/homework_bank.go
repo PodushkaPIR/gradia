@@ -20,7 +20,7 @@ func (m homeworkModel) openBankPicker() (homeworkModel, tea.Cmd) {
 		return routeToHomework(details, parent, homeworkBankMsg{screenID: screen, payload: msg})
 	}
 	bank := taskBankModel{ctx: m.ctx, service: m.bankService, width: m.width, height: max(1, m.height-6), keys: newTaskBankKeyMap(), readOnly: true, wrap: wrap}
-	for _, binding := range []*shortcut{&bank.keys.Create, &bank.keys.Edit, &bank.keys.Rename, &bank.keys.Attachments, &bank.keys.Mark, &bank.keys.Export, &bank.keys.Import} {
+	for _, binding := range []*shortcut{&bank.keys.Create, &bank.keys.CreateImage, &bank.keys.Edit, &bank.keys.Rename, &bank.keys.Attachments, &bank.keys.Mark, &bank.keys.Export, &bank.keys.Import} {
 		binding.SetEnabled(false)
 	}
 	bank, cmd := bank.reload()

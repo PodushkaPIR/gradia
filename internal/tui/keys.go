@@ -229,13 +229,14 @@ type taskBankKeyMap struct {
 	listKeyMap
 	globalKeyMap
 	Create, Edit, Open, Subjects, Topics, Collections, Rename, Clear, Back shortcut
-	Attachments                                                            shortcut
+	Attachments, CreateImage                                               shortcut
 	Mark, Export, Import                                                   shortcut
 }
 
 func newTaskBankKeyMap() taskBankKeyMap {
 	return taskBankKeyMap{listKeyMap: newListKeyMap(), globalKeyMap: newGlobalKeyMap(),
 		Create:      newShortcut("n", "создать", "Создать задачу / коллекцию", "n"),
+		CreateImage: newShortcut("N", "из картинки", "Создать задачу из изображения без переписывания условия", "N"),
 		Edit:        newShortcut("e", "редактировать", "Редактировать выбранную задачу банка", "e"),
 		Open:        newShortcut("Enter", "открыть", "Открыть задачу / применить выбранный фильтр", "enter"),
 		Subjects:    newShortcut("s", "предмет", "Выбрать предмет (фильтр)", "s"),

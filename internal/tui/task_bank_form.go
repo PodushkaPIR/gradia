@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 
@@ -14,6 +15,7 @@ import (
 type taskBankForm struct {
 	content, topics                     textarea.Model
 	subject                             textinput.Model
+	imagePath                           *textinput.Model
 	collections                         []domain.TaskCollection
 	chosen                              map[domain.TaskCollectionID]bool
 	focus, difficulty, collectionCursor int
@@ -49,9 +51,24 @@ func newTaskBankForm(input domain.TaskBankInput, collections []domain.TaskCollec
 	return m.resize(width, height)
 }
 
+func newImageTaskBankForm(input domain.TaskBankInput, collections []domain.TaskCollection, width, height int) taskBankForm {
+	m := newTaskBankForm(input, collections, width, height)
+	path := textinput.New()
+	path.Placeholder = "Полный путь или ~/Downloads/задача.png"
+	m.imagePath = &path
+	m.content.Placeholder = "Например: Квадратные уравнения — задача 1"
+	return m.resize(width, height)
+}
+
 func (m taskBankForm) resize(width, height int) taskBankForm {
+	if m.imagePath != nil {
+		m.imagePath.SetWidth(max(1, min(70, width-4)))
+	}
 	m.content.SetWidth(max(1, min(78, width-4)))
 	m.content.SetHeight(max(2, min(6, height-16)))
+	if m.imagePath != nil {
+		m.content.SetHeight(2)
+	}
 	m.subject.SetWidth(max(1, min(70, width-4)))
 	m.topics.SetWidth(max(1, min(70, width-4)))
 	m.topics.SetHeight(2)
@@ -59,7 +76,12 @@ func (m taskBankForm) resize(width, height int) taskBankForm {
 }
 
 func (m taskBankForm) focusField(field int) (taskBankForm, tea.Cmd) {
-	m.focus = (field + 5) % 5
+	fields := 5
+	if m.imagePath != nil {
+		fields++
+		m.imagePath.Blur()
+	}
+	m.focus = (field + fields) % fields
 	m.content.Blur()
 	m.subject.Blur()
 	m.topics.Blur()
@@ -70,6 +92,8 @@ func (m taskBankForm) focusField(field int) (taskBankForm, tea.Cmd) {
 		return m, m.subject.Focus()
 	case 2:
 		return m, m.topics.Focus()
+	case 5:
+		return m, m.imagePath.Focus()
 	default:
 		return m, nil
 	}
@@ -168,12 +192,26 @@ func (m taskBankForm) Update(msg tea.Msg) (taskBankForm, formAction, tea.Cmd) {
 		if m.topics.Value() != before {
 			m.err = ""
 		}
+	case 5:
+		path := *m.imagePath
+		before := path.Value()
+		path, cmd = path.Update(msg)
+		m.imagePath = &path
+		if path.Value() != before {
+			m.err = ""
+		}
 	}
 	return m, formNoAction, cmd
 }
 
 func (m taskBankForm) fail(err error) (taskBankForm, tea.Cmd) {
 	m.saving, m.err = false, taskBankError(err, "Не удалось сохранить задачу банка. Повторите Ctrl+S.")
+	if m.imagePath != nil {
+		m.err = attachmentError(err, m.err)
+		if errors.Is(err, domain.ErrTaskContentRequired) {
+			m.err = "Введите короткое название задачи."
+		}
+	}
 	return m.focusField(m.focus)
 }
 
@@ -192,7 +230,11 @@ func (m taskBankForm) ShortHelp() string {
 
 func (m taskBankForm) View() string {
 	difficulties := [...]domain.TaskDifficulty{domain.DifficultyEasy, domain.DifficultyMedium, domain.DifficultyHard}
-	text := "Задача банка\nТекст / Markdown / URL:\n" + m.content.View() + "\nПредмет:\n" + m.subject.View() + "\nТемы (через ;, имена с ; — в кавычках):\n" + m.topics.View()
+	heading := "Задача банка\nТекст / Markdown / URL:\n"
+	if m.imagePath != nil {
+		heading = "Задача из картинки\nПуть к изображению:\n" + m.imagePath.View() + "\nКороткое название (условие остаётся в картинке):\n"
+	}
+	text := heading + m.content.View() + "\nПредмет:\n" + m.subject.View() + "\nТемы (через ;, имена с ; — в кавычках):\n" + m.topics.View()
 	text += "\nСложность: " + difficulties[m.difficulty].Label()
 	if m.focus == 3 {
 		text += " (←/→ или 1/2/3)"

@@ -86,7 +86,7 @@ func (m attachmentForm) fail(err error) (attachmentForm, tea.Cmd) {
 }
 
 func attachmentError(err error, fallback string) string {
-	for _, known := range []error{domain.ErrAttachmentType, domain.ErrAttachmentPages, domain.ErrAttachmentPagesOnlyPDF, domain.ErrHomeworkNotFound, domain.ErrHomeworkTaskNotFound, domain.ErrHomeworkAttachmentNotFound, domain.ErrTaskBankTaskNotFound, domain.ErrTaskBankAttachmentNotFound, app.ErrAttachmentFilesUnavailable, app.ErrAttachmentPathRequired, app.ErrAttachmentRegularFileRequired} {
+	for _, known := range []error{domain.ErrAttachmentType, domain.ErrAttachmentPages, domain.ErrAttachmentPagesOnlyPDF, domain.ErrHomeworkNotFound, domain.ErrHomeworkTaskNotFound, domain.ErrHomeworkAttachmentNotFound, domain.ErrTaskBankTaskNotFound, domain.ErrTaskBankAttachmentNotFound, app.ErrAttachmentFilesUnavailable, app.ErrAttachmentPathRequired, app.ErrAttachmentRegularFileRequired, app.ErrTaskImageRequired} {
 		if errors.Is(err, known) {
 			return err.Error()
 		}

@@ -10,6 +10,7 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 	"github.com/shesh/gradia/internal/app"
+	"github.com/shesh/gradia/internal/attachments"
 	"github.com/shesh/gradia/internal/domain"
 	"github.com/shesh/gradia/internal/storage/sqlite"
 )
@@ -46,7 +47,7 @@ func TestTutorSelectsBankTaskWhileComposingHomeworkAndRetriesSnapshot(t *testing
 	if err != nil {
 		t.Fatal(err)
 	}
-	bank := app.NewTaskBankService(store)
+	bank := app.NewTaskBankService(store).WithAttachments(attachments.NewLocalFiles(t.TempDir()), nil)
 	input := domain.TaskBankInput{Content: "Задача из банка", Subject: "Информатика", Topics: []string{"Циклы"}, Difficulty: domain.DifficultyHard}
 	source, err := bank.Create(ctx, input)
 	if err != nil {
@@ -78,7 +79,7 @@ func TestTutorSelectsBankTaskWhileComposingHomeworkAndRetriesSnapshot(t *testing
 		t.Fatal("stale picker load reached new picker")
 	}
 	model, _ = updateApp(model, load())
-	for _, r := range []rune{'n', 'e', 'E', 'I'} {
+	for _, r := range []rune{'n', 'N', 'e', 'E', 'I'} {
 		var command tea.Cmd
 		model, command = updateApp(model, keypress(r))
 		if command != nil || model.screenInputMode() != inputNavigation {

@@ -3,6 +3,7 @@ package app
 import (
 	"context"
 	"errors"
+	"strings"
 	"time"
 
 	"github.com/shesh/gradia/internal/domain"
@@ -15,6 +16,27 @@ func (s *TaskBankService) WithAttachments(files AttachmentFiles, open func(conte
 }
 
 func (s *TaskBankService) AttachmentsEnabled() bool { return s.files != nil }
+
+var ErrTaskImageRequired = errors.New("выберите изображение задачи; PDF можно добавить через вложения")
+
+// CreateFromImage stores the short title and original image together, never a partial Task.
+func (s *TaskBankService) CreateFromImage(ctx context.Context, input domain.TaskBankInput, path string) (domain.TaskBankTask, error) {
+	input, err := domain.NormalizeTaskBankInput(input)
+	if err != nil {
+		return domain.TaskBankTask{}, err
+	}
+	if _, err := validateAttachmentRequest(s.files, path, ""); err != nil {
+		return domain.TaskBankTask{}, err
+	}
+	file, mediaType, err := readAttachment(ctx, s.files, path, "")
+	if err != nil {
+		return domain.TaskBankTask{}, err
+	}
+	if !strings.HasPrefix(mediaType, "image/") {
+		return domain.TaskBankTask{}, ErrTaskImageRequired
+	}
+	return s.repo.CreateBankTaskWithImage(ctx, input, file, mediaType, time.Now().UTC().Truncate(time.Millisecond))
+}
 
 func (s *TaskBankService) Attachments(ctx context.Context, task domain.TaskBankTaskID) ([]domain.TaskBankAttachment, error) {
 	if task <= 0 {

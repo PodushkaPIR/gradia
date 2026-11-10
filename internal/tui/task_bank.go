@@ -219,10 +219,16 @@ func (m taskBankModel) Update(msg tea.Msg) (taskBankModel, tea.Cmd) {
 				return m, cmd
 			}
 			ctx, service, id, screen := m.ctx, m.service, m.editTaskID, m.screenID
+			imageTask, imagePath := form.imagePath != nil, ""
+			if imageTask {
+				imagePath = form.imagePath.Value()
+			}
 			return m, func() tea.Msg {
 				var task domain.TaskBankTask
 				var err error
-				if id == 0 {
+				if imageTask {
+					task, err = service.CreateFromImage(ctx, input, imagePath)
+				} else if id == 0 {
 					task, err = service.Create(ctx, input)
 				} else {
 					task, err = service.Edit(ctx, id, input)
@@ -305,7 +311,7 @@ func (m taskBankModel) Update(msg tea.Msg) (taskBankModel, tea.Cmd) {
 		if m.detail != nil {
 			switch {
 			case key.Matches(pressed, m.keys.Edit.Binding):
-				return m.openTaskForm(m.detail)
+				return m.openTaskForm(m.detail, false)
 			case key.Matches(pressed, m.keys.Up.Binding):
 				m.detailOffset = max(0, m.detailOffset-1)
 			case key.Matches(pressed, m.keys.Down.Binding):
@@ -314,12 +320,16 @@ func (m taskBankModel) Update(msg tea.Msg) (taskBankModel, tea.Cmd) {
 			return m, nil
 		}
 		switch {
+		case key.Matches(pressed, m.keys.CreateImage.Binding):
+			if m.view == bankTasks && m.service.AttachmentsEnabled() {
+				return m.openTaskForm(nil, true)
+			}
 		case key.Matches(pressed, m.keys.Create.Binding):
 			if m.view == bankCollections {
 				return m.openCollectionForm(nil)
 			}
 			if m.view == bankTasks {
-				return m.openTaskForm(nil)
+				return m.openTaskForm(nil, false)
 			}
 		case m.view == bankCollections && key.Matches(pressed, m.keys.Rename.Binding):
 			if m.cursor >= 0 && m.cursor < len(m.data.Collections) {
@@ -327,7 +337,7 @@ func (m taskBankModel) Update(msg tea.Msg) (taskBankModel, tea.Cmd) {
 			}
 		case key.Matches(pressed, m.keys.Edit.Binding):
 			if m.view == bankTasks && m.cursor >= 0 && m.cursor < len(m.data.Tasks) {
-				return m.openTaskForm(&m.data.Tasks[m.cursor])
+				return m.openTaskForm(&m.data.Tasks[m.cursor], false)
 			}
 		case key.Matches(pressed, m.keys.Subjects.Binding):
 			return m.chooseView(bankSubjects), nil
@@ -420,7 +430,7 @@ func (m taskBankModel) openAttachments(task domain.TaskBankTask) (taskBankModel,
 	return m, cmd
 }
 
-func (m taskBankModel) openTaskForm(task *domain.TaskBankTask) (taskBankModel, tea.Cmd) {
+func (m taskBankModel) openTaskForm(task *domain.TaskBankTask, fromImage bool) (taskBankModel, tea.Cmd) {
 	input := domain.TaskBankInput{Subject: m.filter.Subject, Difficulty: domain.DifficultyEasy}
 	if m.filter.Topic != "" {
 		input.Topics = []string{m.filter.Topic}
@@ -433,7 +443,13 @@ func (m taskBankModel) openTaskForm(task *domain.TaskBankTask) (taskBankModel, t
 		input = domain.TaskBankInput{Content: task.Content, Subject: task.Subject, Topics: task.Topics, Difficulty: task.Difficulty, CollectionIDs: task.CollectionIDs}
 		m.editTaskID = task.ID
 	}
-	form, cmd := newTaskBankForm(input, m.data.Collections, m.width, m.height).focusField(0)
+	form := newTaskBankForm(input, m.data.Collections, m.width, m.height)
+	field := 0
+	if fromImage {
+		form = newImageTaskBankForm(input, m.data.Collections, m.width, m.height)
+		field = 5
+	}
+	form, cmd := form.focusField(field)
 	m.taskForm = &form
 	return m, cmd
 }
@@ -688,9 +704,9 @@ func (m taskBankModel) ShortHelp() string {
 		return shortHelp(m.keys.Open, m.keys.Back, m.keys.Help)
 	}
 	if m.keys.Export.Enabled() {
-		return shortHelp(m.keys.Open, m.keys.Create, m.keys.Mark, m.keys.Export, m.keys.Import, m.keys.Back, m.keys.Help)
+		return shortHelp(m.keys.Open, m.keys.Create, m.keys.CreateImage, m.keys.Mark, m.keys.Export, m.keys.Import, m.keys.Back, m.keys.Help)
 	}
-	return shortHelp(m.keys.Open, m.keys.Create, m.keys.Edit, m.keys.Attachments, m.keys.Collections, m.keys.Import, m.keys.Back, m.keys.Help)
+	return shortHelp(m.keys.Open, m.keys.Create, m.keys.CreateImage, m.keys.Edit, m.keys.Attachments, m.keys.Collections, m.keys.Import, m.keys.Back, m.keys.Help)
 }
 
 func (m taskBankModel) FullHelp() (string, []shortcut) {
@@ -704,7 +720,7 @@ func (m taskBankModel) FullHelp() (string, []shortcut) {
 	} else if m.view == bankCollections {
 		bindings = append(bindings, keys.Create, keys.Rename, keys.Open, keys.Clear)
 	} else if m.view == bankTasks {
-		bindings = append(bindings, keys.Open, keys.Create, keys.Edit, keys.Attachments, keys.Mark, keys.Export, keys.Import, keys.Subjects, keys.Topics, keys.Collections, keys.Clear)
+		bindings = append(bindings, keys.Open, keys.Create, keys.CreateImage, keys.Edit, keys.Attachments, keys.Mark, keys.Export, keys.Import, keys.Subjects, keys.Topics, keys.Collections, keys.Clear)
 	} else {
 		bindings = append(bindings, keys.Open, keys.Clear)
 	}

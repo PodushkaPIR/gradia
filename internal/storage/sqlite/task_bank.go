@@ -56,6 +56,14 @@ func (s *Store) RenameTaskCollection(ctx context.Context, id domain.TaskCollecti
 }
 
 func (s *Store) SaveBankTask(ctx context.Context, id domain.TaskBankTaskID, input domain.TaskBankInput, at time.Time) (domain.TaskBankTask, error) {
+	return s.saveBankTask(ctx, id, input, at, nil, "")
+}
+
+func (s *Store) CreateBankTaskWithImage(ctx context.Context, input domain.TaskBankInput, file domain.AttachmentFile, mediaType string, at time.Time) (domain.TaskBankTask, error) {
+	return s.saveBankTask(ctx, 0, input, at, &file, mediaType)
+}
+
+func (s *Store) saveBankTask(ctx context.Context, id domain.TaskBankTaskID, input domain.TaskBankInput, at time.Time, image *domain.AttachmentFile, mediaType string) (domain.TaskBankTask, error) {
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return domain.TaskBankTask{}, err
@@ -92,6 +100,11 @@ func (s *Store) SaveBankTask(ctx context.Context, id domain.TaskBankTaskID, inpu
 	}
 	for _, collection := range input.CollectionIDs {
 		if _, err := tx.ExecContext(ctx, `INSERT INTO task_bank_collection_tasks (collection_id, task_id) VALUES (?, ?)`, collection, task.ID); err != nil {
+			return domain.TaskBankTask{}, err
+		}
+	}
+	if image != nil {
+		if _, err := tx.ExecContext(ctx, `INSERT INTO task_bank_attachments (task_id, name, media_type, pages, content, created_at) VALUES (?, ?, ?, '', ?, ?)`, task.ID, image.Name, mediaType, image.Data, at.UnixMilli()); err != nil {
 			return domain.TaskBankTask{}, err
 		}
 	}
