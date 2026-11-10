@@ -15,7 +15,7 @@ import (
 	"github.com/shesh/gradia/internal/reports"
 )
 
-func TestLocalUtilityExportsPDFWithoutChangingHTML(t *testing.T) {
+func TestPDFExportKeepsHTML(t *testing.T) {
 	component := "отчёты # spaces"
 	if runtime.GOOS != "windows" {
 		component += "?"
@@ -62,7 +62,7 @@ func TestLocalUtilityExportsPDFWithoutChangingHTML(t *testing.T) {
 	t.Logf("PDF: %s (%d bytes)", pdfPath, len(pdf))
 }
 
-func TestPDFUtilityFailuresKeepHTMLAndRemovePartialPDF(t *testing.T) {
+func TestPDFFailureCleanup(t *testing.T) {
 	if runtime.GOOS == "windows" {
 		t.Skip("uses a POSIX executable fixture")
 	}

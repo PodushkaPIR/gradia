@@ -29,7 +29,7 @@ func (s *homeworkListTestStore) ListHomework(ctx context.Context, student domain
 	return s.Store.ListHomework(ctx, student)
 }
 
-func TestLearningReportIncludesHomeworkSummaryOnlyWhenExplicitlyRequested(t *testing.T) {
+func TestHomeworkSummaryIsOptIn(t *testing.T) {
 	ctx := context.Background()
 	dir := t.TempDir()
 	store, err := sqlite.Open(ctx, filepath.Join(dir, "report.db"))

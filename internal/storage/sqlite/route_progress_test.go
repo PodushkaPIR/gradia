@@ -11,7 +11,7 @@ import (
 	"github.com/shesh/gradia/internal/domain"
 )
 
-func TestRouteProgressPersistsAndIsIsolated(t *testing.T) {
+func TestProgressPersistenceAndIsolation(t *testing.T) {
 	ctx := context.Background()
 	path := filepath.Join(t.TempDir(), "test.db")
 	store, err := Open(ctx, path)

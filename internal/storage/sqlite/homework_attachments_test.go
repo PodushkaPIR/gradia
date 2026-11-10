@@ -17,7 +17,7 @@ import (
 	"github.com/shesh/gradia/internal/domain"
 )
 
-func TestHomeworkAttachmentsRetainOriginalBytesAfterSourceRemovalAndRestart(t *testing.T) {
+func TestAttachmentsSurviveRestart(t *testing.T) {
 	ctx := context.Background()
 	dir := t.TempDir()
 	path := filepath.Join(dir, "attachments.db")
@@ -147,7 +147,7 @@ func TestHomeworkAttachmentsRetainOriginalBytesAfterSourceRemovalAndRestart(t *t
 	}
 }
 
-func TestCanceledHomeworkFileImportDoesNotSavePartialAttachment(t *testing.T) {
+func TestCanceledAttachmentIsNotSaved(t *testing.T) {
 	dir := t.TempDir()
 	store, err := Open(context.Background(), filepath.Join(dir, "cancel.db"))
 	if err != nil {
@@ -205,7 +205,7 @@ func (f *trackingAttachmentFiles) Read(ctx context.Context, path string) (domain
 	return f.HomeworkAttachmentFiles.Read(ctx, path)
 }
 
-func TestHomeworkAttachmentValidationAndExportFailuresPreserveOriginals(t *testing.T) {
+func TestAttachmentErrorsKeepOriginals(t *testing.T) {
 	ctx := context.Background()
 	dir := t.TempDir()
 	store, err := Open(ctx, filepath.Join(dir, "validation.db"))

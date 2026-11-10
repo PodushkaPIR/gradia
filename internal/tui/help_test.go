@@ -11,7 +11,7 @@ import (
 	"github.com/shesh/gradia/internal/domain"
 )
 
-func TestHelpCapturesKeysAndPreservesScreen(t *testing.T) {
+func TestHelpPreservesScreen(t *testing.T) {
 	repo := &studentRepoStub{students: []domain.Student{{ID: 1, Name: "Анна"}, {ID: 2, Name: "Иван"}}}
 	model := NewApp(context.Background(), app.NewStudentService(repo), app.NewTemplateService(&templateRepoStub{}), nil)
 	model, _ = updateApp(model, model.Init()())

@@ -169,15 +169,15 @@ func (m studentsModel) Update(msg tea.Msg) (studentsModel, tea.Cmd) {
 				details.keys.Homework.SetEnabled(m.homeworkService != nil)
 				details.keys.Report.SetEnabled(m.reportService != nil)
 				details.keys.PDFReport.SetEnabled(m.reportService != nil && m.reportService.PDFExportEnabled())
-				details.keys.ReportWithHomework.SetEnabled(m.reportService != nil && m.reportService.HomeworkReportEnabled())
-				details.keys.PDFWithHomework.SetEnabled(m.reportService != nil && m.reportService.HomeworkReportEnabled() && m.reportService.PDFExportEnabled())
+				details.keys.ReportWithHomework.SetEnabled(m.reportService != nil && m.reportService.HomeworkEnabled())
+				details.keys.PDFWithHomework.SetEnabled(m.reportService != nil && m.reportService.HomeworkEnabled() && m.reportService.PDFExportEnabled())
 				details, cmd := details.reload()
 				m.details = &details
 				return m, cmd
 			}
 		case key.Matches(pressed, m.keys.Create.Binding):
 			if !m.loading {
-				form := m.newStudentNameForm("Новый ученик")
+				form := m.newNameForm("Новый ученик")
 				cmd := form.Init()
 				m.editStudentID = 0
 				m.form = &form
@@ -185,7 +185,7 @@ func (m studentsModel) Update(msg tea.Msg) (studentsModel, tea.Cmd) {
 			}
 		case key.Matches(pressed, m.keys.Edit.Binding):
 			if student, ok := m.selectedStudent(); ok {
-				form := m.newStudentNameForm("Редактирование ученика")
+				form := m.newNameForm("Редактирование ученика")
 				form.name.SetValue(student.Name)
 				form.name.CursorEnd()
 				cmd := form.Init()
@@ -213,7 +213,7 @@ func (m studentsModel) Update(msg tea.Msg) (studentsModel, tea.Cmd) {
 	return m, nil
 }
 
-func (m studentsModel) newStudentNameForm(title string) nameForm {
+func (m studentsModel) newNameForm(title string) nameForm {
 	return newNameForm(nameFormConfig{Title: title, Label: "Имя", Placeholder: "Имя ученика", Limit: domain.StudentNameMaxLength, Width: m.width})
 }
 

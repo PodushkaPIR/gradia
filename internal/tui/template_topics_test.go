@@ -109,7 +109,7 @@ func TestTemplateTopicsErrorsAndCancel(t *testing.T) {
 	}
 }
 
-func TestTemplateTopicsIgnorePreviousScreenReply(t *testing.T) {
+func TestTopicsDropStaleScreenReply(t *testing.T) {
 	repo := &templateRepoStub{
 		templates: []domain.Template{{ID: 1, Name: "Python"}, {ID: 2, Name: "Математика"}},
 		topics:    []domain.TemplateTopic{{ID: 1, TemplateID: 1, Name: "Циклы"}, {ID: 2, TemplateID: 2, Name: "Дроби"}},

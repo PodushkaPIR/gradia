@@ -45,7 +45,7 @@ func (m studentDetailsModel) generateReport(request learningReportRequest) (stud
 	}
 }
 
-func (m studentDetailsModel) exportReportPDF(path string) tea.Cmd {
+func (m studentDetailsModel) exportPDF(path string) tea.Cmd {
 	ctx, service, screen := m.ctx, m.reportService, m.screenID
 	return func() tea.Msg {
 		pdfPath, err := service.ExportPDF(ctx, path)

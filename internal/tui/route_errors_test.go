@@ -91,7 +91,7 @@ func (r *routeRepoStub) CreateRouteFromTemplate(_ context.Context, student domai
 	return route, nil
 }
 
-func TestRouteCreationRetryAndScopedReplies(t *testing.T) {
+func TestRouteCreationRetryAndRouting(t *testing.T) {
 	repo := &routeRepoStub{err: errors.New("write failed")}
 	model := NewApp(context.Background(), app.NewStudentService(&studentRepoStub{students: []domain.Student{{ID: 1, Name: "Иван"}}}), app.NewTemplateService(&templateRepoStub{templates: []domain.Template{{ID: 1, Name: "Python"}}}), app.NewRouteService(repo))
 	model, _ = updateApp(model, model.Init()())

@@ -59,7 +59,7 @@ func init() {
 	os.Exit(0)
 }
 
-func TestPDFUtilityCleansUpWindowsLauncherDescendants(t *testing.T) {
+func TestPDFKillsWindowsDescendants(t *testing.T) {
 	for _, mode := range []string{"exit", "wait"} {
 		t.Run(mode, func(t *testing.T) {
 			root := t.TempDir()

@@ -11,7 +11,7 @@ import (
 	"github.com/shesh/gradia/internal/domain"
 )
 
-func TestTaskBankPersistsClassificationAndOverlappingCollectionsIndependentlyOfHomework(t *testing.T) {
+func TestBankClassificationPersistence(t *testing.T) {
 	ctx := context.Background()
 	path := filepath.Join(t.TempDir(), "bank.db")
 	store, err := Open(ctx, path)
@@ -120,7 +120,7 @@ func TestTaskBankPersistsClassificationAndOverlappingCollectionsIndependentlyOfH
 	}
 }
 
-func TestTaskBankRejectsInvalidChangesAndRollsBackMetadataTogether(t *testing.T) {
+func TestBankMetadataRollback(t *testing.T) {
 	ctx := context.Background()
 	store, err := Open(ctx, filepath.Join(t.TempDir(), "rollback.db"))
 	if err != nil {

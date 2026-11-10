@@ -18,7 +18,7 @@ import (
 	"github.com/shesh/gradia/internal/storage/sqlite"
 )
 
-func TestTutorCreatesImageTaskAndRetriesWithoutLosingDraft(t *testing.T) {
+func TestImageTaskRetryKeepsDraft(t *testing.T) {
 	ctx := context.Background()
 	dir := t.TempDir()
 	store, err := sqlite.Open(ctx, filepath.Join(dir, "image.db"))
@@ -126,7 +126,7 @@ func TestTutorCreatesImageTaskAndRetriesWithoutLosingDraft(t *testing.T) {
 	}
 }
 
-func TestImageTaskCreationDisabledWithoutFileAdapter(t *testing.T) {
+func TestImageEntryNeedsFileAdapter(t *testing.T) {
 	ctx := context.Background()
 	store, err := sqlite.Open(ctx, filepath.Join(t.TempDir(), "disabled.db"))
 	if err != nil {

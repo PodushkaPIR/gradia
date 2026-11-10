@@ -11,7 +11,7 @@ import (
 	"github.com/shesh/gradia/internal/domain"
 )
 
-func TestLearningPlanTopicReorderingPersistsAndPreservesLearningData(t *testing.T) {
+func TestReorderPreservesLearningData(t *testing.T) {
 	ctx := context.Background()
 	path := filepath.Join(t.TempDir(), "order.db")
 	store, err := Open(ctx, path)
@@ -126,7 +126,7 @@ func TestLearningPlanTopicReorderingPersistsAndPreservesLearningData(t *testing.
 	}
 }
 
-func TestLearningPlanReorderingRejectsDifferentParentsAndForeignPlans(t *testing.T) {
+func TestReorderRejectsForeignTopics(t *testing.T) {
 	store, plan, root := revisionFixture(t)
 	ctx := context.Background()
 	routes := app.NewRouteService(store)
@@ -189,7 +189,7 @@ func TestLearningPlanReorderingRejectsDifferentParentsAndForeignPlans(t *testing
 	}
 }
 
-func TestLearningPlanReorderingRollsBackBothPositionsOnFailure(t *testing.T) {
+func TestReorderRollback(t *testing.T) {
 	store, plan, root := revisionFixture(t)
 	ctx := context.Background()
 	routes := app.NewRouteService(store)

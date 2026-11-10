@@ -24,7 +24,7 @@ import (
 	"github.com/shesh/gradia/internal/taskpacks"
 )
 
-func TestTaskPackImportPreservesUnusualOriginalNamesWhenMaterializingFiles(t *testing.T) {
+func TestPackKeepsUnusualFilenames(t *testing.T) {
 	if runtime.GOOS == "windows" {
 		t.Skip("original filenames are valid on Unix")
 	}
@@ -144,7 +144,7 @@ func writeImportFixture(t *testing.T, manifest taskpacks.Manifest, assets map[st
 	return file.Name()
 }
 
-func TestTaskPackRejectsInvalidPacksWithoutImportingEarlierValidTasks(t *testing.T) {
+func TestInvalidPackImportIsAtomic(t *testing.T) {
 	for _, test := range []struct {
 		name              string
 		mutate            func(*taskpacks.Manifest, map[string][]byte)
@@ -200,7 +200,7 @@ func TestTaskPackRejectsInvalidPacksWithoutImportingEarlierValidTasks(t *testing
 	}
 }
 
-func TestTaskPackImportRoundTripSkipsDuplicatesAndKeepsLocalEdits(t *testing.T) {
+func TestPackRoundTripKeepsLocalEdits(t *testing.T) {
 	ctx := context.Background()
 	dir := t.TempDir()
 	sourceStore, err := sqlite.Open(ctx, filepath.Join(dir, "source.db"))
@@ -349,7 +349,7 @@ func TestTaskPackImportRoundTripSkipsDuplicatesAndKeepsLocalEdits(t *testing.T) 
 	}
 }
 
-func TestTaskPackRejectsUnreadableTruncatedAndOversizedArchives(t *testing.T) {
+func TestRejectBrokenAndOversizedPacks(t *testing.T) {
 	ctx := context.Background()
 	store, err := sqlite.Open(ctx, filepath.Join(t.TempDir(), "invalid-zip.db"))
 	if err != nil {

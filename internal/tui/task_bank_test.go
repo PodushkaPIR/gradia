@@ -21,7 +21,7 @@ type bankTestStore struct {
 	saveErr error
 }
 
-func TestTaskBankDetailWrapsAndScrollsLongContentAfterResize(t *testing.T) {
+func TestBankDetailWrapResizeAndScroll(t *testing.T) {
 	ctx := context.Background()
 	store, err := sqlite.Open(ctx, filepath.Join(t.TempDir(), "wrap.db"))
 	if err != nil {
@@ -64,7 +64,7 @@ func TestTaskBankDetailWrapsAndScrollsLongContentAfterResize(t *testing.T) {
 	}
 }
 
-func TestTaskBankRejectsStaleScreenRepliesAndPreservesEditorMetadata(t *testing.T) {
+func TestBankReplyAndEditIsolation(t *testing.T) {
 	ctx := context.Background()
 	store, err := sqlite.Open(ctx, filepath.Join(t.TempDir(), "bank-routing.db"))
 	if err != nil {
@@ -131,7 +131,7 @@ func (s *bankTestStore) SaveBankTask(ctx context.Context, id domain.TaskBankTask
 	return s.Store.SaveBankTask(ctx, id, input, at)
 }
 
-func TestTutorCreatesAndFiltersTaskBankWithOverlappingCollections(t *testing.T) {
+func TestBankFiltersAndCollections(t *testing.T) {
 	ctx := context.Background()
 	store, err := sqlite.Open(ctx, filepath.Join(t.TempDir(), "bank.db"))
 	if err != nil {

@@ -17,7 +17,7 @@ import (
 	"github.com/shesh/gradia/internal/taskpacks"
 )
 
-func TestImageTaskPersistsOriginalAndSupportsHomeworkAndTaskPacks(t *testing.T) {
+func TestImageTaskRoundTrip(t *testing.T) {
 	ctx := context.Background()
 	dir := t.TempDir()
 	dbPath := filepath.Join(dir, "image.db")
@@ -132,7 +132,7 @@ func TestImageTaskPersistsOriginalAndSupportsHomeworkAndTaskPacks(t *testing.T) 
 	}
 }
 
-func TestImageTaskValidationAndLateFailureLeaveNoPartialTask(t *testing.T) {
+func TestImageTaskCreationIsAtomic(t *testing.T) {
 	ctx := context.Background()
 	dir := t.TempDir()
 	store, err := Open(ctx, filepath.Join(dir, "rollback.db"))

@@ -45,7 +45,7 @@ func typeHomeworkText(model App, text string) App {
 	return model
 }
 
-func TestTutorManagesHomeworkAndTaskCompletionThroughTUI(t *testing.T) {
+func TestHomeworkCompletionWorkflow(t *testing.T) {
 	ctx := context.Background()
 	store, err := sqlite.Open(ctx, filepath.Join(t.TempDir(), "homework.db"))
 	if err != nil {
@@ -149,7 +149,7 @@ func deliverHomeworkCommand(model homeworkModel, cmd tea.Cmd) homeworkModel {
 	return model
 }
 
-func TestHomeworkIgnoresStaleTaskLoadsAndCancelsUnsavedEditors(t *testing.T) {
+func TestHomeworkDropsStaleLoads(t *testing.T) {
 	ctx := context.Background()
 	store, err := sqlite.Open(ctx, filepath.Join(t.TempDir(), "routing.db"))
 	if err != nil {

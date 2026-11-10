@@ -10,7 +10,7 @@ import (
 	"github.com/shesh/gradia/internal/domain"
 )
 
-func TestPersonalPlanTopicsCanBeEditedWithoutLosingProgress(t *testing.T) {
+func TestPlanEditsKeepProgress(t *testing.T) {
 	ctx := context.Background()
 	store, err := Open(ctx, filepath.Join(t.TempDir(), "test.db"))
 	if err != nil {

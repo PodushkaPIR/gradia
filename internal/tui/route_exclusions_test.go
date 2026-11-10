@@ -32,7 +32,7 @@ func deliverRouteViewCommand(m routeViewModel, cmd tea.Cmd) routeViewModel {
 	return m
 }
 
-func TestRouteExclusionUIKeepsHiddenDataAndIndividualFlags(t *testing.T) {
+func TestExclusionKeepsHiddenState(t *testing.T) {
 	parent := domain.RouteTopicID(1)
 	repo := &progressRepoStub{topics: []domain.RouteTopic{
 		{ID: 1, RouteID: 10, Name: "Циклы"},

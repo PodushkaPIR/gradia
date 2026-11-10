@@ -100,7 +100,7 @@ func TestRevisionSemanticsAndHistory(t *testing.T) {
 	}
 }
 
-func TestProgressAndHistoryRollbackTogether(t *testing.T) {
+func TestProgressHistoryRollback(t *testing.T) {
 	store, route, topic := revisionFixture(t)
 	ctx := context.Background()
 	at := time.Now()
@@ -131,7 +131,7 @@ func TestProgressAndHistoryRollbackTogether(t *testing.T) {
 	}
 }
 
-func TestRevisionMigrationPreservesExistingProgress(t *testing.T) {
+func TestRevisionMigrationKeepsProgress(t *testing.T) {
 	ctx := context.Background()
 	path := filepath.Join(t.TempDir(), "old.db")
 	db, err := sql.Open("sqlite", path)

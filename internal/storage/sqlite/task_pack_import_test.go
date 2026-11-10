@@ -20,7 +20,7 @@ type importPackReader struct{ data app.TaskPackData }
 
 func (r importPackReader) Read(context.Context, string) (app.TaskPackData, error) { return r.data, nil }
 
-func TestTaskPackImportRollsBackLateWriteFailureAndPreservesHomework(t *testing.T) {
+func TestPackImportRollback(t *testing.T) {
 	ctx := context.Background()
 	store, err := Open(ctx, filepath.Join(t.TempDir(), "rollback.db"))
 	if err != nil {

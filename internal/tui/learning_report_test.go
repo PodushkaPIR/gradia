@@ -42,7 +42,7 @@ func (w *reportWriterStub) Write(_ context.Context, report app.LearningReport) (
 	return "/tmp/learning-report.html", nil
 }
 
-func TestTutorGeneratesReportThroughCommandAndKeepsFilePathWhenBrowserFails(t *testing.T) {
+func TestReportBrowserFailureKeepsPath(t *testing.T) {
 	ctx := context.Background()
 	repo := &progressRepoStub{topics: []domain.RouteTopic{{ID: 2, RouteID: 10, Name: "Тема", Status: domain.ProgressMastered}}}
 	repo.routes = []domain.Route{{ID: 10, StudentID: 1, Name: "Выбранный план"}, {ID: 11, StudentID: 1, Name: "Другой план"}}
@@ -108,7 +108,7 @@ func TestTutorGeneratesReportThroughCommandAndKeepsFilePathWhenBrowserFails(t *t
 	}
 }
 
-func TestTutorExportsPDFThroughUtilityAndCanRecoverWhenUtilityFails(t *testing.T) {
+func TestPDFExportRetry(t *testing.T) {
 	ctx := context.Background()
 	repo := &routeRepoStub{routes: []domain.Route{{ID: 10, StudentID: 1, Name: "Выбранный план"}}}
 	students := app.NewStudentService(&studentRepoStub{students: []domain.Student{{ID: 1, Name: "Иван"}}})

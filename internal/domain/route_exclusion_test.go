@@ -2,7 +2,7 @@ package domain
 
 import "testing"
 
-func TestRouteTopicExclusionsPreserveIndividualFlags(t *testing.T) {
+func TestExclusionFlagsStayIndependent(t *testing.T) {
 	root, branch := RouteTopicID(1), RouteTopicID(2)
 	topics := []RouteTopic{
 		{ID: 4, ParentID: &branch},

@@ -16,7 +16,7 @@ import (
 	"github.com/shesh/gradia/internal/domain"
 )
 
-func TestBankAttachmentsPreserveOriginalsAndStayIndependentOfHomework(t *testing.T) {
+func TestBankAttachmentsStayIndependent(t *testing.T) {
 	ctx := context.Background()
 	dir := t.TempDir()
 	path := filepath.Join(dir, "bank-attachments.db")
@@ -129,7 +129,7 @@ func TestBankAttachmentsPreserveOriginalsAndStayIndependentOfHomework(t *testing
 	}
 }
 
-func TestBankAttachmentFailuresKeepTaskAndOriginalData(t *testing.T) {
+func TestBankAttachmentFailureSafety(t *testing.T) {
 	ctx := context.Background()
 	dir := t.TempDir()
 	store, err := Open(ctx, filepath.Join(dir, "errors.db"))

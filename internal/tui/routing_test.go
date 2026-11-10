@@ -11,7 +11,7 @@ import (
 	"github.com/shesh/gradia/internal/domain"
 )
 
-func TestRoutingDeliversToInactiveScreenAndThroughHelp(t *testing.T) {
+func TestRoutingToInactiveScreens(t *testing.T) {
 	students := &studentRepoStub{students: []domain.Student{{ID: 1, Name: "Иван"}}}
 	templates := &templateRepoStub{templates: []domain.Template{{ID: 1, Name: "Python"}}}
 	model := NewApp(context.Background(), app.NewStudentService(students), app.NewTemplateService(templates), nil)
@@ -36,7 +36,7 @@ func TestRoutingDeliversToInactiveScreenAndThroughHelp(t *testing.T) {
 	}
 }
 
-func TestRoutingDropsAllRepliesForClosedTopics(t *testing.T) {
+func TestClosedTopicsDropReplies(t *testing.T) {
 	repo := &templateRepoStub{templates: []domain.Template{{ID: 1, Name: "Python"}}}
 	model := openTemplatesForTopics(t, repo)
 	model, oldLoad := updateApp(model, tea.KeyPressMsg{Code: tea.KeyEnter})
@@ -70,7 +70,7 @@ func TestRoutingDropsAllRepliesForClosedTopics(t *testing.T) {
 	}
 }
 
-func TestOperationCommandsAddressSuccessAndFailure(t *testing.T) {
+func TestCommandReplyRouting(t *testing.T) {
 	ctx := context.Background()
 	for _, failed := range []bool{false, true} {
 		for _, operation := range []string{"load students", "create student", "rename student", "delete student", "load templates", "create template", "rename template", "load topics", "create topic", "rename topic"} {

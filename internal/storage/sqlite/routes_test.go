@@ -13,7 +13,7 @@ import (
 
 var _ app.RouteRepository = (*Store)(nil)
 
-func TestRouteSnapshotIsIndependentAndPersistent(t *testing.T) {
+func TestRouteSnapshotPersistence(t *testing.T) {
 	ctx := context.Background()
 	path := filepath.Join(t.TempDir(), "test.db")
 	store, err := Open(ctx, path)

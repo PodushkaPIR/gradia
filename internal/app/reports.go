@@ -69,7 +69,7 @@ func (s *ReportService) WithHomework(homework *HomeworkService) *ReportService {
 	return &configured
 }
 
-func (s *ReportService) HomeworkReportEnabled() bool { return s.homework != nil }
+func (s *ReportService) HomeworkEnabled() bool { return s.homework != nil }
 
 func (s *ReportService) PDFExportEnabled() bool { return s.pdf != nil }
 

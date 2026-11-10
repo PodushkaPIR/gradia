@@ -147,7 +147,7 @@ func (m templatesModel) Update(msg tea.Msg) (templatesModel, tea.Cmd) {
 			}
 		case key.Matches(pressed, m.keys.Create.Binding):
 			if !m.loading {
-				form := m.newTemplateForm("Новый шаблон")
+				form := m.newNameForm("Новый шаблон")
 				cmd := form.Init()
 				m.editTemplateID = 0
 				m.form = &form
@@ -156,7 +156,7 @@ func (m templatesModel) Update(msg tea.Msg) (templatesModel, tea.Cmd) {
 		case key.Matches(pressed, m.keys.Edit.Binding):
 			if !m.loading && m.err == nil && m.cursor >= 0 && m.cursor < len(m.templates) {
 				template := m.templates[m.cursor]
-				form := m.newTemplateForm("Редактирование шаблона")
+				form := m.newNameForm("Редактирование шаблона")
 				form.name.SetValue(template.Name)
 				form.name.CursorEnd()
 				cmd := form.Init()
@@ -175,7 +175,7 @@ func (m templatesModel) Update(msg tea.Msg) (templatesModel, tea.Cmd) {
 	return m, nil
 }
 
-func (m templatesModel) newTemplateForm(title string) nameForm {
+func (m templatesModel) newNameForm(title string) nameForm {
 	return newNameForm(nameFormConfig{Title: title, Label: "Название", Placeholder: "Например, Python с нуля", Limit: domain.TemplateNameMaxLength, Width: m.width})
 }
 

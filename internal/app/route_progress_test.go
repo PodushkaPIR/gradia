@@ -29,7 +29,7 @@ func TestRouteProgressCountsOnlyLeaves(t *testing.T) {
 	}
 }
 
-func TestRouteProgressExcludesBranchesWithoutTurningParentsIntoLeaves(t *testing.T) {
+func TestExclusionKeepsParentsNonLeaf(t *testing.T) {
 	parent, nested := domain.RouteTopicID(1), domain.RouteTopicID(2)
 	topics := []domain.RouteTopic{
 		{ID: 1, Status: domain.ProgressMastered},
@@ -49,7 +49,7 @@ func TestRouteProgressExcludesBranchesWithoutTurningParentsIntoLeaves(t *testing
 	}
 }
 
-func TestSetStatusRejectsParentAndUnknownTopic(t *testing.T) {
+func TestSetStatusValidation(t *testing.T) {
 	parent := domain.RouteTopicID(1)
 	repo := &routeRepositoryStub{topics: []domain.RouteTopic{{ID: 1, RouteID: 10}, {ID: 2, RouteID: 10, ParentID: &parent}}}
 	service := NewRouteService(repo)

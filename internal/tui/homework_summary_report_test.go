@@ -25,7 +25,7 @@ func (s *homeworkSummaryTestStore) ListHomework(ctx context.Context, student dom
 	return s.Store.ListHomework(ctx, student)
 }
 
-func TestTutorExplicitlyIncludesHomeworkInHTMLAndPDFWithoutChangingDefaults(t *testing.T) {
+func TestHomeworkReportOptIn(t *testing.T) {
 	ctx := context.Background()
 	store, err := sqlite.Open(ctx, filepath.Join(t.TempDir(), "report.db"))
 	if err != nil {

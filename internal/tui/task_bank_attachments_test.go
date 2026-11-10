@@ -16,7 +16,7 @@ import (
 	"github.com/shesh/gradia/internal/storage/sqlite"
 )
 
-func TestTutorAttachesAndOpensBankFilesWithSharedAttachmentScreen(t *testing.T) {
+func TestBankAttachmentWorkflow(t *testing.T) {
 	ctx := context.Background()
 	dir := t.TempDir()
 	store, err := sqlite.Open(ctx, filepath.Join(dir, "bank-files.db"))

@@ -13,14 +13,14 @@ func (s *Store) SetRouteTopicStatus(ctx context.Context, routeID domain.RouteID,
 	if !status.Valid() {
 		return domain.ErrInvalidProgressStatus
 	}
-	return s.changeRouteTopicProgress(ctx, routeID, topicID, &status, nil, at)
+	return s.changeTopicProgress(ctx, routeID, topicID, &status, nil, at)
 }
 
 func (s *Store) SetRouteTopicRevision(ctx context.Context, routeID domain.RouteID, topicID domain.RouteTopicID, revision bool, at time.Time) error {
-	return s.changeRouteTopicProgress(ctx, routeID, topicID, nil, &revision, at)
+	return s.changeTopicProgress(ctx, routeID, topicID, nil, &revision, at)
 }
 
-func (s *Store) changeRouteTopicProgress(ctx context.Context, routeID domain.RouteID, topicID domain.RouteTopicID, requestedStatus *domain.ProgressStatus, requestedRevision *bool, at time.Time) error {
+func (s *Store) changeTopicProgress(ctx context.Context, routeID domain.RouteID, topicID domain.RouteTopicID, requestedStatus *domain.ProgressStatus, requestedRevision *bool, at time.Time) error {
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return err

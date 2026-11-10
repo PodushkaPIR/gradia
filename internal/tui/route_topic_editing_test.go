@@ -17,7 +17,7 @@ func typeIntoRouteTopicForm(model routeViewModel, value string) routeViewModel {
 	return model
 }
 
-func TestTutorCanAddNestedTopicAndRenameItWithoutChangingParentData(t *testing.T) {
+func TestNestedTopicEditsKeepParent(t *testing.T) {
 	repo := &progressRepoStub{topics: []domain.RouteTopic{{
 		ID: 1, RouteID: 10, Name: "Циклы", Status: domain.ProgressMastered,
 		Revision: true, Notes: "Заметка преподавателя",

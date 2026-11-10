@@ -12,7 +12,7 @@ import (
 	"github.com/shesh/gradia/internal/domain"
 )
 
-func TestRenameTemplatePreservesTopicsAcrossReopen(t *testing.T) {
+func TestTemplateRenamePersistence(t *testing.T) {
 	ctx := context.Background()
 	path := filepath.Join(t.TempDir(), "test.db")
 	store, err := Open(ctx, path)

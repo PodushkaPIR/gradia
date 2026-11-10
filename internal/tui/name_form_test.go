@@ -8,7 +8,7 @@ import (
 	tea "charm.land/bubbletea/v2"
 )
 
-func TestNameFormReturnsActionsWithoutBusinessCommands(t *testing.T) {
+func TestNameFormOnlyReturnsActions(t *testing.T) {
 	form := newNameForm(nameFormConfig{Title: "Форма", Label: "Название", Limit: 200, Width: 80})
 	form.Init()
 	for _, pressed := range []rune{'q', '?', 'n'} {

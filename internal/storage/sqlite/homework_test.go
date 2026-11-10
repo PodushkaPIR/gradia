@@ -12,7 +12,7 @@ import (
 	"github.com/shesh/gradia/internal/domain"
 )
 
-func TestHomeworkPersistsTaskCompletionWithoutChangingLearningPlan(t *testing.T) {
+func TestHomeworkCompletionIsIndependent(t *testing.T) {
 	ctx := context.Background()
 	path := filepath.Join(t.TempDir(), "homework.db")
 	store, err := Open(ctx, path)
@@ -125,7 +125,7 @@ func TestHomeworkPersistsTaskCompletionWithoutChangingLearningPlan(t *testing.T)
 	}
 }
 
-func TestHomeworkRejectsInvalidAndForeignTaskChanges(t *testing.T) {
+func TestHomeworkRejectsForeignChanges(t *testing.T) {
 	ctx := context.Background()
 	store, err := Open(ctx, filepath.Join(t.TempDir(), "validation.db"))
 	if err != nil {
@@ -207,7 +207,7 @@ func TestHomeworkRejectsInvalidAndForeignTaskChanges(t *testing.T) {
 	}
 }
 
-func TestHomeworkTaskContentAndTopicsRollBackTogether(t *testing.T) {
+func TestTaskMetadataRollback(t *testing.T) {
 	ctx := context.Background()
 	store, err := Open(ctx, filepath.Join(t.TempDir(), "rollback.db"))
 	if err != nil {

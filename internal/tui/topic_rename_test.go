@@ -12,7 +12,7 @@ import (
 	"github.com/shesh/gradia/internal/domain"
 )
 
-func TestRenameTopicFormPreservesTreeAndSelection(t *testing.T) {
+func TestTopicRenamePreservesSelection(t *testing.T) {
 	for _, tc := range []struct {
 		name string
 		id   domain.TemplateTopicID
@@ -79,7 +79,7 @@ func TestRenameTopicFormPreservesTreeAndSelection(t *testing.T) {
 	}
 }
 
-func TestRenameTopicCancelErrorsAndStaleReply(t *testing.T) {
+func TestTopicRenameErrorsAndCancel(t *testing.T) {
 	repo := &templateRepoStub{templates: []domain.Template{{ID: 1, Name: "Python"}}, topics: nestedTopics()}
 	model := openTemplatesForTopics(t, repo)
 	model, load := updateApp(model, tea.KeyPressMsg{Code: tea.KeyEnter})

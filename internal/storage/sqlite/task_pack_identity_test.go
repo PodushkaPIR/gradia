@@ -18,7 +18,7 @@ func (w *identityPackWriter) Write(_ context.Context, source app.TaskPackSource,
 	return "identity-test.zip", nil
 }
 
-func TestTaskPackIdentityMigrationPreservesLegacyBankAndStableKeys(t *testing.T) {
+func TestPackIdentityMigration(t *testing.T) {
 	ctx := context.Background()
 	path := filepath.Join(t.TempDir(), "legacy14.db")
 	db, err := sql.Open("sqlite", path)

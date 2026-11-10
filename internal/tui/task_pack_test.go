@@ -36,7 +36,7 @@ func (r *packReaderStub) Read(_ context.Context, path string) (app.TaskPackData,
 	return app.TaskPackData{Tasks: []app.TaskPackTask{task}}, nil
 }
 
-func TestTutorImportsPackThroughPathFormAndCanRetryWithoutLeavingBank(t *testing.T) {
+func TestPackImportRetryKeepsScreen(t *testing.T) {
 	ctx := context.Background()
 	store, err := sqlite.Open(ctx, filepath.Join(t.TempDir(), "import.db"))
 	if err != nil {
@@ -104,7 +104,7 @@ func (w *packWriterStub) Write(_ context.Context, source app.TaskPackSource, _ f
 	return "/tmp/demo-task-pack.zip", nil
 }
 
-func TestTutorExportsMarkedTasksAcrossFiltersAndRetriesWithoutLosingSelection(t *testing.T) {
+func TestPackExportRetryKeepsSelection(t *testing.T) {
 	ctx := context.Background()
 	store, err := sqlite.Open(ctx, filepath.Join(t.TempDir(), "packs.db"))
 	if err != nil {

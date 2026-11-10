@@ -29,7 +29,7 @@ func (s *homeworkBankTestStore) SnapshotBankTaskToHomework(ctx context.Context, 
 	return s.Store.SnapshotBankTaskToHomework(ctx, student, id, source, at)
 }
 
-func TestTutorSelectsBankTaskWhileComposingHomeworkAndRetriesSnapshot(t *testing.T) {
+func TestHomeworkBankSelectionRetry(t *testing.T) {
 	ctx := context.Background()
 	store, err := sqlite.Open(ctx, filepath.Join(t.TempDir(), "picker.db"))
 	if err != nil {

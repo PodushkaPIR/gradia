@@ -16,7 +16,7 @@ import (
 	"github.com/shesh/gradia/internal/domain"
 )
 
-func TestHomeworkRejectsNonRegularAttachmentSourcesWithoutBlocking(t *testing.T) {
+func TestRejectNonRegularSources(t *testing.T) {
 	dir := t.TempDir()
 	store, err := Open(context.Background(), filepath.Join(dir, "test.db"))
 	if err != nil {

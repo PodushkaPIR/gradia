@@ -17,7 +17,7 @@ import (
 	"github.com/shesh/gradia/internal/reports"
 )
 
-func TestBrowserPrintsLearningReportToPDF(t *testing.T) {
+func TestBrowserPrintsReportPDF(t *testing.T) {
 	var browser string
 	for _, name := range []string{"chromium", "chromium-browser", "google-chrome"} {
 		if path, err := exec.LookPath(name); err == nil {

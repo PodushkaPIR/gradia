@@ -32,7 +32,7 @@ func (r *notesRepoStub) SetRouteTopicNote(_ context.Context, route domain.RouteI
 	return domain.ErrRouteTopicNotFound
 }
 
-func TestRouteNoteEditorSaveCancelAndErrors(t *testing.T) {
+func TestNoteEditorSaveCancelAndErrors(t *testing.T) {
 	repo := &notesRepoStub{progressRepoStub: progressRepoStub{topics: []domain.RouteTopic{{ID: 1, RouteID: 10, Name: "Циклы", Notes: "Прежняя заметка", Status: domain.ProgressLearning}}}}
 	repo.routes = []domain.Route{{ID: 10, StudentID: 1, Name: "Python"}}
 	model := NewApp(context.Background(), app.NewStudentService(&studentRepoStub{students: []domain.Student{{ID: 1, Name: "Иван"}}}), nil, app.NewRouteService(repo))

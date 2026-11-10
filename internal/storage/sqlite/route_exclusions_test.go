@@ -12,7 +12,7 @@ import (
 	"github.com/shesh/gradia/internal/domain"
 )
 
-func TestExclusionMigrationPersistenceAndBranchRestoration(t *testing.T) {
+func TestExclusionMigrationAndRestore(t *testing.T) {
 	ctx := context.Background()
 	path := filepath.Join(t.TempDir(), "version8.db")
 	db, err := sql.Open("sqlite", path)
@@ -132,7 +132,7 @@ func TestExclusionMigrationPersistenceAndBranchRestoration(t *testing.T) {
 	}
 }
 
-func TestExclusionHistoryAtomicityAndIsolation(t *testing.T) {
+func TestExclusionHistoryIsAtomic(t *testing.T) {
 	store, route, topic := revisionFixture(t)
 	ctx := context.Background()
 	at := time.Now()

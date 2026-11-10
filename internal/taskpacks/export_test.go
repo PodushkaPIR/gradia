@@ -53,7 +53,7 @@ func readTaskPack(t *testing.T, filename string) (taskpacks.Manifest, map[string
 	return manifest, files
 }
 
-func TestTaskPackExportsOnlySelectedTasksMetadataAndOriginalAssets(t *testing.T) {
+func TestPackExportsSelectedOriginals(t *testing.T) {
 	ctx := context.Background()
 	dir := t.TempDir()
 	database := filepath.Join(dir, "bank.db")
@@ -220,7 +220,7 @@ func (s *packReadTestStore) GetBankAttachment(ctx context.Context, task domain.T
 	return s.Store.GetBankAttachment(ctx, task, id)
 }
 
-func TestTaskPackFailuresDoNotPublishPartialZIPOrOverwriteEarlierPack(t *testing.T) {
+func TestPackExportFailureSafety(t *testing.T) {
 	ctx := context.Background()
 	dir := t.TempDir()
 	store, err := sqlite.Open(ctx, filepath.Join(dir, "errors.db"))

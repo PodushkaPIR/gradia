@@ -38,7 +38,7 @@ func (f *attachmentTestFiles) Write(ctx context.Context, file domain.AttachmentF
 	return f.LocalFiles.Write(ctx, file)
 }
 
-func TestTutorAttachesPDFAndKeepsFileAvailableWhenViewerFails(t *testing.T) {
+func TestViewerFailureKeepsAttachment(t *testing.T) {
 	ctx := context.Background()
 	dir := t.TempDir()
 	store, err := sqlite.Open(ctx, filepath.Join(dir, "test.db"))

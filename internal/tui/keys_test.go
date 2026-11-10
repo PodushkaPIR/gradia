@@ -50,7 +50,7 @@ func TestKeyBindingDrivesActionAndHelp(t *testing.T) {
 	}
 }
 
-func TestDisabledBindingIsHiddenAndInactive(t *testing.T) {
+func TestDisabledKeysStayInactive(t *testing.T) {
 	model := NewApp(context.Background(), app.NewStudentService(&studentRepoStub{students: []domain.Student{{ID: 1, Name: "Иван"}}}), nil, nil)
 	model, _ = updateApp(model, model.Init()())
 	model.students.keys.Create.SetEnabled(false)
@@ -67,7 +67,7 @@ func TestDisabledBindingIsHiddenAndInactive(t *testing.T) {
 	}
 }
 
-func TestHelpUsesContextBindingsWithoutRepeatedMovement(t *testing.T) {
+func TestHelpUsesContextKeys(t *testing.T) {
 	repo := &templateRepoStub{templates: []domain.Template{{ID: 1, Name: "Python"}}}
 	model := NewApp(context.Background(), app.NewStudentService(&studentRepoStub{}), app.NewTemplateService(repo), nil)
 	check := func() {

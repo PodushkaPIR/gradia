@@ -35,7 +35,7 @@ func (r *orderRepoStub) SwapRouteTopics(_ context.Context, _ domain.RouteID, fir
 	return []domain.RouteTopicPosition{{TopicID: first, Position: r.topics[firstIndex].Position}, {TopicID: second, Position: r.topics[secondIndex].Position}}, nil
 }
 
-func TestTutorReordersSiblingBranchesAndKeepsSelection(t *testing.T) {
+func TestReorderKeepsSelection(t *testing.T) {
 	parent := domain.RouteTopicID(1)
 	repo := &orderRepoStub{progressRepoStub: progressRepoStub{topics: []domain.RouteTopic{
 		{ID: 1, RouteID: 10, Name: "Раздел"},

@@ -12,7 +12,7 @@ import (
 	"github.com/shesh/gradia/internal/domain"
 )
 
-func TestLearningPlanDetailsPersistIndependentlyOfSourceAndOtherPlans(t *testing.T) {
+func TestPlanDetailsStayIndependent(t *testing.T) {
 	ctx := context.Background()
 	path := filepath.Join(t.TempDir(), "details.db")
 	store, err := Open(ctx, path)

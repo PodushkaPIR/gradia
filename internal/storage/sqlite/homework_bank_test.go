@@ -16,7 +16,7 @@ import (
 	"github.com/shesh/gradia/internal/domain"
 )
 
-func TestHomeworkBankSnapshotPreservesOriginalsAndIndependentCompletion(t *testing.T) {
+func TestBankSnapshotsStayIndependent(t *testing.T) {
 	ctx := context.Background()
 	dir := t.TempDir()
 	database := filepath.Join(dir, "snapshot.db")
@@ -160,7 +160,7 @@ func TestHomeworkBankSnapshotPreservesOriginalsAndIndependentCompletion(t *testi
 	}
 }
 
-func TestHomeworkBankSnapshotRejectsForeignTargetsAndRollsBackFailedCopies(t *testing.T) {
+func TestSnapshotFailuresAreAtomic(t *testing.T) {
 	ctx := context.Background()
 	store, err := Open(ctx, filepath.Join(t.TempDir(), "rollback.db"))
 	if err != nil {

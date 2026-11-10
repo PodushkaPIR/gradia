@@ -85,7 +85,7 @@ func (m studentDetailsModel) Update(msg tea.Msg) (studentDetailsModel, tea.Cmd) 
 		m.reportPath, m.reportOpenErr, m.reportErr = msg.path, nil, nil
 		if msg.pdf {
 			m.reportPDFExporting = true
-			return m, m.exportReportPDF(msg.path)
+			return m, m.exportPDF(msg.path)
 		}
 		m.reportGenerating = false
 		return m, m.openReport(msg.path)

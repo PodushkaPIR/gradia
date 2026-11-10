@@ -62,7 +62,7 @@ func TestDeleteStudentPersistsAndUsesID(t *testing.T) {
 	}
 }
 
-func TestDeleteStudentRestrictLeavesDataIntact(t *testing.T) {
+func TestDeleteRestrictionKeepsData(t *testing.T) {
 	ctx := context.Background()
 	store, err := Open(ctx, filepath.Join(t.TempDir(), "test.db"))
 	if err != nil {

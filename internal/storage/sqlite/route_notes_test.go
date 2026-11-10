@@ -10,7 +10,7 @@ import (
 	"github.com/shesh/gradia/internal/domain"
 )
 
-func TestRouteNotesPersistIndependentlyOfProgress(t *testing.T) {
+func TestNotesStayIndependentOfProgress(t *testing.T) {
 	ctx := context.Background()
 	path := filepath.Join(t.TempDir(), "test.db")
 	store, err := Open(ctx, path)

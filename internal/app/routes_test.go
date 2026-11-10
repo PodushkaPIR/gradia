@@ -35,7 +35,7 @@ func (r *routeRepositoryStub) SetRouteTopicExcluded(context.Context, domain.Rout
 	return r.err
 }
 
-func TestRouteExclusionServiceValidatesIDsAndPropagatesErrors(t *testing.T) {
+func TestExclusionServiceErrors(t *testing.T) {
 	ctx := context.Background()
 	repo := &routeRepositoryStub{}
 	service := NewRouteService(repo)
@@ -104,7 +104,7 @@ func (r *routeRepositoryStub) CreateRouteFromTemplate(_ context.Context, student
 	return domain.Route{StudentID: student, SourceTemplateID: &template, CreatedAt: at, UpdatedAt: at}, r.err
 }
 
-func TestRouteServiceValidatesIDsAndPropagatesErrors(t *testing.T) {
+func TestRouteServiceErrors(t *testing.T) {
 	repo := &routeRepositoryStub{}
 	service := NewRouteService(repo)
 	if _, err := service.Create(context.Background(), 0, 1); !errors.Is(err, domain.ErrStudentNotFound) {

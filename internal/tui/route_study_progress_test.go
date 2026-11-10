@@ -12,7 +12,7 @@ import (
 	"github.com/shesh/gradia/internal/domain"
 )
 
-func TestLearningPlanShowsMultipleCurrentTopicsWithoutGroupingByStatus(t *testing.T) {
+func TestCurrentTopicsStayInPlanOrder(t *testing.T) {
 	parent, hidden := domain.RouteTopicID(1), domain.RouteTopicID(7)
 	topics := []domain.RouteTopic{
 		{ID: 9, Name: "Будущая Б", Position: 3},
@@ -62,7 +62,7 @@ func TestLearningPlanShowsMultipleCurrentTopicsWithoutGroupingByStatus(t *testin
 	}
 }
 
-func TestSuggestedNextTopicFollowsOrderAndProgressWithoutWritingState(t *testing.T) {
+func TestNextTopicSuggestionIsReadOnly(t *testing.T) {
 	parent, hidden := domain.RouteTopicID(1), domain.RouteTopicID(6)
 	repo := &orderRepoStub{progressRepoStub: progressRepoStub{topics: []domain.RouteTopic{
 		{ID: 1, RouteID: 10, Name: "Раздел", Status: domain.ProgressLearning},
@@ -114,7 +114,7 @@ func TestSuggestedNextTopicFollowsOrderAndProgressWithoutWritingState(t *testing
 	}
 }
 
-func TestNoSuggestedTopicWhenPlanIsEmptyCompletedOrExcluded(t *testing.T) {
+func TestNoNextTopicForInactivePlans(t *testing.T) {
 	parent := domain.RouteTopicID(1)
 	for _, test := range []struct {
 		name   string

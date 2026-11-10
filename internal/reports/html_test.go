@@ -15,7 +15,7 @@ import (
 	"github.com/shesh/gradia/internal/storage/sqlite"
 )
 
-func TestLocalHTMLReportUsesSelectedPlanAndOmitsPrivateAndExcludedData(t *testing.T) {
+func TestHTMLReportScopeAndPrivacy(t *testing.T) {
 	ctx := context.Background()
 	dir := t.TempDir()
 	store, err := sqlite.Open(ctx, filepath.Join(dir, "test.db"))
@@ -156,7 +156,7 @@ func TestLocalHTMLReportUsesSelectedPlanAndOmitsPrivateAndExcludedData(t *testin
 	}
 }
 
-func TestLocalHTMLReportHandlesEmptyPlansCancellationAndOutputErrors(t *testing.T) {
+func TestHTMLReportErrors(t *testing.T) {
 	ctx := context.Background()
 	dir := t.TempDir()
 	writer := reports.NewHTMLWriter(dir)

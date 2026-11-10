@@ -11,7 +11,7 @@ import (
 	"github.com/shesh/gradia/internal/domain"
 )
 
-func TestTutorEditsLearningPlanNameAndDescriptionFromStudentCard(t *testing.T) {
+func TestEditPlanDetails(t *testing.T) {
 	repo := &routeRepoStub{routes: []domain.Route{{ID: 10, StudentID: 1, Name: "Python"}, {ID: 11, StudentID: 1, Name: "Другой план"}}}
 	model := NewApp(context.Background(), app.NewStudentService(&studentRepoStub{students: []domain.Student{{ID: 1, Name: "Иван"}}}), nil, app.NewRouteService(repo))
 	model, _ = updateApp(model, model.Init()())

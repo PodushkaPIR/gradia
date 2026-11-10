@@ -12,7 +12,7 @@ import (
 	"github.com/shesh/gradia/internal/domain"
 )
 
-func TestRenameTemplateKeepsTopicsAndSelection(t *testing.T) {
+func TestTemplateRenameKeepsSelection(t *testing.T) {
 	repo := &templateRepoStub{templates: []domain.Template{{ID: 1, Name: "Алгоритмы"}, {ID: 2, Name: "Математика"}}, topics: []domain.TemplateTopic{{ID: 1, TemplateID: 2, Name: "Дроби"}}}
 	model := openTemplatesForTopics(t, repo)
 	model, _ = updateApp(model, keypress('j'))

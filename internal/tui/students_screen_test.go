@@ -20,7 +20,7 @@ func studentsPayload(t *testing.T, cmd tea.Cmd) tea.Msg {
 	return result.payload
 }
 
-func TestStudentsScreenOwnsCreateAndDelete(t *testing.T) {
+func TestStudentCreateDeleteWorkflow(t *testing.T) {
 	repo := &studentRepoStub{}
 	screen := newStudentsModel(context.Background(), app.NewStudentService(repo))
 	screen, _ = screen.Update(studentsPayload(t, screen.Init()))
