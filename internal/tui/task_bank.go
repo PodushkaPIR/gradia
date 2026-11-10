@@ -284,7 +284,12 @@ func (m taskBankModel) Update(msg tea.Msg) (taskBankModel, tea.Cmd) {
 			return m, nil
 		}
 		if key.Matches(pressed, m.keys.Import.Binding) && m.view == bankTasks && m.detail == nil {
-			form := newNameForm(nameFormConfig{Title: "Импорт Task Pack\nПри конфликте сохраняются локальные версии задач.", Label: "Путь к ZIP-файлу", Placeholder: "/path/to/task-pack.zip", Width: m.width})
+			form := newNameForm(nameFormConfig{
+				Title:       "Импорт Task Pack\nПри конфликте сохраняются локальные версии задач.",
+				Label:       "Путь к ZIP-файлу",
+				Placeholder: "/path/to/task-pack.zip",
+				Width:       m.width,
+			})
 			cmd := form.Init()
 			m.importForm = &form
 			return m, cmd
@@ -424,7 +429,16 @@ func (m taskBankModel) openAttachments(task domain.TaskBankTask) (taskBankModel,
 	m.attachmentSeq++
 	bankID, screen := m.screenID, m.attachmentSeq
 	wrap := func(msg tea.Msg) tea.Msg { return routeToBankAttachments(bankID, screen, msg) }
-	child := taskAttachmentsModel{ctx: m.ctx, source: bankAttachmentSource{service: m.service, task: task.ID}, wrap: wrap, screenID: screen, taskContent: task.Content, width: m.width, height: m.height, keys: newAttachmentsKeyMap()}
+	child := taskAttachmentsModel{
+		ctx:         m.ctx,
+		source:      bankAttachmentSource{service: m.service, task: task.ID},
+		wrap:        wrap,
+		screenID:    screen,
+		taskContent: task.Content,
+		width:       m.width,
+		height:      m.height,
+		keys:        newAttachmentsKeyMap(),
+	}
 	child, cmd := child.reload()
 	m.attachments = &child
 	return m, cmd
@@ -440,14 +454,20 @@ func (m taskBankModel) openTaskForm(task *domain.TaskBankTask, fromImage bool) (
 	}
 	m.editTaskID = 0
 	if task != nil {
-		input = domain.TaskBankInput{Content: task.Content, Subject: task.Subject, Topics: task.Topics, Difficulty: task.Difficulty, CollectionIDs: task.CollectionIDs}
+		input = domain.TaskBankInput{
+			Content:       task.Content,
+			Subject:       task.Subject,
+			Topics:        task.Topics,
+			Difficulty:    task.Difficulty,
+			CollectionIDs: task.CollectionIDs,
+		}
 		m.editTaskID = task.ID
 	}
 	form := newTaskBankForm(input, m.data.Collections, m.width, m.height)
-	field := 0
+	field := taskFieldContent
 	if fromImage {
 		form = newImageTaskBankForm(input, m.data.Collections, m.width, m.height)
-		field = 5
+		field = taskFieldImagePath
 	}
 	form, cmd := form.focusField(field)
 	m.taskForm = &form
@@ -468,7 +488,19 @@ func (m taskBankModel) openCollectionForm(item *domain.TaskCollection) (taskBank
 }
 
 func taskBankError(err error, fallback string) string {
-	for _, known := range []error{domain.ErrTaskContentRequired, domain.ErrTaskTopicsRequired, domain.ErrInvalidTaskDifficulty, domain.ErrTopicNameTooLong, domain.ErrTaskSubjectRequired, domain.ErrTaskBankNameTooLong, domain.ErrTaskBankTaskNotFound, domain.ErrTaskCollectionNameRequired, domain.ErrTaskCollectionNameExists, domain.ErrTaskCollectionNotFound, errTaskTopicFormat} {
+	for _, known := range []error{
+		domain.ErrTaskContentRequired,
+		domain.ErrTaskTopicsRequired,
+		domain.ErrInvalidTaskDifficulty,
+		domain.ErrTopicNameTooLong,
+		domain.ErrTaskSubjectRequired,
+		domain.ErrTaskBankNameTooLong,
+		domain.ErrTaskBankTaskNotFound,
+		domain.ErrTaskCollectionNameRequired,
+		domain.ErrTaskCollectionNameExists,
+		domain.ErrTaskCollectionNotFound,
+		errTaskTopicFormat,
+	} {
 		if errors.Is(err, known) {
 			return err.Error()
 		}
@@ -538,7 +570,9 @@ func (m taskBankModel) collectionNames(ids []domain.TaskCollectionID) string {
 }
 
 func (m taskBankModel) taskMetadata(task domain.TaskBankTask) string {
-	return "Предмет: " + task.Subject + " · Сложность: " + task.Difficulty.Label() + "\nТемы: " + strings.ReplaceAll(formatTaskTopics(task.Topics), "\n", " ↵ ") + "\nКоллекции: " + m.collectionNames(task.CollectionIDs)
+	return "Предмет: " + task.Subject + " · Сложность: " + task.Difficulty.Label() +
+		"\nТемы: " + strings.ReplaceAll(formatTaskTopics(task.Topics), "\n", " ↵ ") +
+		"\nКоллекции: " + m.collectionNames(task.CollectionIDs)
 }
 
 func (m taskBankModel) detailLines() []string {

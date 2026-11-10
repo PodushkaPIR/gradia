@@ -12,6 +12,16 @@ import (
 	"github.com/shesh/gradia/internal/domain"
 )
 
+const (
+	taskFieldContent = iota
+	taskFieldSubject
+	taskFieldTopics
+	taskFieldDifficulty
+	taskFieldCollections
+	taskFieldImagePath
+	taskFieldCount
+)
+
 type taskBankForm struct {
 	content, topics                     textarea.Model
 	subject                             textinput.Model
@@ -47,7 +57,15 @@ func newTaskBankForm(input domain.TaskBankInput, collections []domain.TaskCollec
 	if input.Difficulty == domain.DifficultyHard {
 		difficulty = 2
 	}
-	m := taskBankForm{content: content, topics: topics, subject: subject, collections: collections, chosen: chosen, difficulty: difficulty, keys: newTaskContentFormKeyMap()}
+	m := taskBankForm{
+		content:     content,
+		topics:      topics,
+		subject:     subject,
+		collections: collections,
+		chosen:      chosen,
+		difficulty:  difficulty,
+		keys:        newTaskContentFormKeyMap(),
+	}
 	return m.resize(width, height)
 }
 
@@ -76,9 +94,9 @@ func (m taskBankForm) resize(width, height int) taskBankForm {
 }
 
 func (m taskBankForm) focusField(field int) (taskBankForm, tea.Cmd) {
-	fields := 5
+	fields := taskFieldCount - 1
 	if m.imagePath != nil {
-		fields++
+		fields = taskFieldCount
 		m.imagePath.Blur()
 	}
 	m.focus = (field + fields) % fields
@@ -86,13 +104,13 @@ func (m taskBankForm) focusField(field int) (taskBankForm, tea.Cmd) {
 	m.subject.Blur()
 	m.topics.Blur()
 	switch m.focus {
-	case 0:
+	case taskFieldContent:
 		return m, m.content.Focus()
-	case 1:
+	case taskFieldSubject:
 		return m, m.subject.Focus()
-	case 2:
+	case taskFieldTopics:
 		return m, m.topics.Focus()
-	case 5:
+	case taskFieldImagePath:
 		return m, m.imagePath.Focus()
 	default:
 		return m, nil
@@ -111,7 +129,13 @@ func (m taskBankForm) input() (domain.TaskBankInput, error) {
 			ids = append(ids, collection.ID)
 		}
 	}
-	return domain.TaskBankInput{Content: m.content.Value(), Subject: m.subject.Value(), Topics: topics, Difficulty: difficulties[m.difficulty], CollectionIDs: ids}, nil
+	return domain.TaskBankInput{
+		Content:       m.content.Value(),
+		Subject:       m.subject.Value(),
+		Topics:        topics,
+		Difficulty:    difficulties[m.difficulty],
+		CollectionIDs: ids,
+	}, nil
 }
 
 func (m taskBankForm) Update(msg tea.Msg) (taskBankForm, formAction, tea.Cmd) {
@@ -135,7 +159,7 @@ func (m taskBankForm) Update(msg tea.Msg) (taskBankForm, formAction, tea.Cmd) {
 			updated, cmd := m.focusField(m.focus - 1)
 			return updated, formNoAction, cmd
 		}
-		if m.focus == 3 {
+		if m.focus == taskFieldDifficulty {
 			switch pressed.String() {
 			case "1":
 				m.difficulty = 0
@@ -151,7 +175,7 @@ func (m taskBankForm) Update(msg tea.Msg) (taskBankForm, formAction, tea.Cmd) {
 			m.err = ""
 			return m, formNoAction, nil
 		}
-		if m.focus == 4 {
+		if m.focus == taskFieldCollections {
 			switch pressed.String() {
 			case "up", "k":
 				m.collectionCursor = max(0, m.collectionCursor-1)
@@ -174,25 +198,25 @@ func (m taskBankForm) Update(msg tea.Msg) (taskBankForm, formAction, tea.Cmd) {
 	}
 	var cmd tea.Cmd
 	switch m.focus {
-	case 0:
+	case taskFieldContent:
 		before := m.content.Value()
 		m.content, cmd = m.content.Update(msg)
 		if m.content.Value() != before {
 			m.err = ""
 		}
-	case 1:
+	case taskFieldSubject:
 		before := m.subject.Value()
 		m.subject, cmd = m.subject.Update(msg)
 		if m.subject.Value() != before {
 			m.err = ""
 		}
-	case 2:
+	case taskFieldTopics:
 		before := m.topics.Value()
 		m.topics, cmd = m.topics.Update(msg)
 		if m.topics.Value() != before {
 			m.err = ""
 		}
-	case 5:
+	case taskFieldImagePath:
 		path := *m.imagePath
 		before := path.Value()
 		path, cmd = path.Update(msg)
@@ -232,11 +256,14 @@ func (m taskBankForm) View() string {
 	difficulties := [...]domain.TaskDifficulty{domain.DifficultyEasy, domain.DifficultyMedium, domain.DifficultyHard}
 	heading := "Задача банка\nТекст / Markdown / URL:\n"
 	if m.imagePath != nil {
-		heading = "Задача из картинки\nПуть к изображению:\n" + m.imagePath.View() + "\nКороткое название (условие остаётся в картинке):\n"
+		heading = "Задача из картинки\nПуть к изображению:\n" + m.imagePath.View() +
+			"\nКороткое название (условие остаётся в картинке):\n"
 	}
-	text := heading + m.content.View() + "\nПредмет:\n" + m.subject.View() + "\nТемы (через ;, имена с ; — в кавычках):\n" + m.topics.View()
+	text := heading + m.content.View() +
+		"\nПредмет:\n" + m.subject.View() +
+		"\nТемы (через ;, имена с ; — в кавычках):\n" + m.topics.View()
 	text += "\nСложность: " + difficulties[m.difficulty].Label()
-	if m.focus == 3 {
+	if m.focus == taskFieldDifficulty {
 		text += " (←/→ или 1/2/3)"
 	}
 	text += "\nКоллекции (Space — выбор, ↑/↓ — список):"
@@ -247,7 +274,7 @@ func (m taskBankForm) View() string {
 	for i := start; i < min(len(m.collections), start+2); i++ {
 		collection := m.collections[i]
 		marker, check := " ", " "
-		if m.focus == 4 && i == m.collectionCursor {
+		if m.focus == taskFieldCollections && i == m.collectionCursor {
 			marker = ">"
 		}
 		if m.chosen[collection.ID] {

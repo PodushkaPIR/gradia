@@ -48,11 +48,17 @@ func scanTaskCollection(row interface{ Scan(...any) error }) (domain.TaskCollect
 }
 
 func (s *Store) CreateTaskCollection(ctx context.Context, name string, at time.Time) (domain.TaskCollection, error) {
-	return scanTaskCollection(s.db.QueryRowContext(ctx, `INSERT INTO task_bank_collections (name, created_at, updated_at) VALUES (?, ?, ?) RETURNING `+bankCollectionColumns, name, at.UnixMilli(), at.UnixMilli()))
+	return scanTaskCollection(s.db.QueryRowContext(ctx,
+		`INSERT INTO task_bank_collections (name, created_at, updated_at) VALUES (?, ?, ?) RETURNING `+bankCollectionColumns,
+		name, at.UnixMilli(), at.UnixMilli(),
+	))
 }
 
 func (s *Store) RenameTaskCollection(ctx context.Context, id domain.TaskCollectionID, name string, at time.Time) (domain.TaskCollection, error) {
-	return scanTaskCollection(s.db.QueryRowContext(ctx, `UPDATE task_bank_collections SET name = ?, updated_at = ? WHERE id = ? RETURNING `+bankCollectionColumns, name, at.UnixMilli(), id))
+	return scanTaskCollection(s.db.QueryRowContext(ctx,
+		`UPDATE task_bank_collections SET name = ?, updated_at = ? WHERE id = ? RETURNING `+bankCollectionColumns,
+		name, at.UnixMilli(), id,
+	))
 }
 
 func (s *Store) SaveBankTask(ctx context.Context, id domain.TaskBankTaskID, input domain.TaskBankInput, at time.Time) (domain.TaskBankTask, error) {
@@ -80,9 +86,15 @@ func (s *Store) saveBankTask(ctx context.Context, id domain.TaskBankTaskID, inpu
 	}
 	var task domain.TaskBankTask
 	if id == 0 {
-		task, err = scanBankTask(tx.QueryRowContext(ctx, `INSERT INTO task_bank_tasks (content_md, subject, difficulty, created_at, updated_at) VALUES (?, ?, ?, ?, ?) RETURNING `+bankTaskColumns, input.Content, input.Subject, input.Difficulty, at.UnixMilli(), at.UnixMilli()))
+		task, err = scanBankTask(tx.QueryRowContext(ctx,
+			`INSERT INTO task_bank_tasks (content_md, subject, difficulty, created_at, updated_at) VALUES (?, ?, ?, ?, ?) RETURNING `+bankTaskColumns,
+			input.Content, input.Subject, input.Difficulty, at.UnixMilli(), at.UnixMilli(),
+		))
 	} else {
-		task, err = scanBankTask(tx.QueryRowContext(ctx, `UPDATE task_bank_tasks SET content_md = ?, subject = ?, difficulty = ?, updated_at = ? WHERE id = ? RETURNING `+bankTaskColumns, input.Content, input.Subject, input.Difficulty, at.UnixMilli(), id))
+		task, err = scanBankTask(tx.QueryRowContext(ctx,
+			`UPDATE task_bank_tasks SET content_md = ?, subject = ?, difficulty = ?, updated_at = ? WHERE id = ? RETURNING `+bankTaskColumns,
+			input.Content, input.Subject, input.Difficulty, at.UnixMilli(), id,
+		))
 	}
 	if err != nil {
 		return domain.TaskBankTask{}, err
@@ -94,17 +106,26 @@ func (s *Store) saveBankTask(ctx context.Context, id domain.TaskBankTaskID, inpu
 		return domain.TaskBankTask{}, err
 	}
 	for position, name := range input.Topics {
-		if _, err := tx.ExecContext(ctx, `INSERT INTO task_bank_task_topics (task_id, topic_name, position) VALUES (?, ?, ?)`, task.ID, name, position); err != nil {
+		if _, err := tx.ExecContext(ctx,
+			`INSERT INTO task_bank_task_topics (task_id, topic_name, position) VALUES (?, ?, ?)`,
+			task.ID, name, position,
+		); err != nil {
 			return domain.TaskBankTask{}, err
 		}
 	}
 	for _, collection := range input.CollectionIDs {
-		if _, err := tx.ExecContext(ctx, `INSERT INTO task_bank_collection_tasks (collection_id, task_id) VALUES (?, ?)`, collection, task.ID); err != nil {
+		if _, err := tx.ExecContext(ctx,
+			`INSERT INTO task_bank_collection_tasks (collection_id, task_id) VALUES (?, ?)`,
+			collection, task.ID,
+		); err != nil {
 			return domain.TaskBankTask{}, err
 		}
 	}
 	if image != nil {
-		if _, err := tx.ExecContext(ctx, `INSERT INTO task_bank_attachments (task_id, name, media_type, pages, content, created_at) VALUES (?, ?, ?, '', ?, ?)`, task.ID, image.Name, mediaType, image.Data, at.UnixMilli()); err != nil {
+		if _, err := tx.ExecContext(ctx,
+			`INSERT INTO task_bank_attachments (task_id, name, media_type, pages, content, created_at) VALUES (?, ?, ?, '', ?, ?)`,
+			task.ID, image.Name, mediaType, image.Data, at.UnixMilli(),
+		); err != nil {
 			return domain.TaskBankTask{}, err
 		}
 	}
